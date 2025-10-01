@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QListWidget, QTabWidget, QLineEdit, QSlider
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QListWidget, QTabWidget, QLineEdit, QSlider, QButtonGroup, QRadioButton, QGridLayout
 from PyQt5.QtCore import Qt, QSize
 
 class Ui_MainWindow(object):
@@ -26,11 +26,11 @@ class Ui_MainWindow(object):
 
         # Center panel for image preview
         center_panel = QVBoxLayout()
-        self.preview_label = QLabel("请拖放图片到此处，或使用按钮添加文件。")
-        self.preview_label.setAlignment(Qt.AlignCenter)
-        self.preview_label.setMinimumSize(600, 400)
-        self.preview_label.setStyleSheet("border: 1px solid black;")
-        center_panel.addWidget(self.preview_label)
+        self.image_preview_label = QLabel("请拖放图片到此处，或使用按钮添加文件。")
+        self.image_preview_label.setAlignment(Qt.AlignCenter)
+        self.image_preview_label.setMinimumSize(600, 400)
+        self.image_preview_label.setStyleSheet("border: 1px solid black;")
+        center_panel.addWidget(self.image_preview_label)
 
         # Right panel for settings
         right_panel = QVBoxLayout()
@@ -43,8 +43,8 @@ class Ui_MainWindow(object):
         
         # Text watermark settings
         watermark_layout.addWidget(QLabel("文字水印"))
-        self.text_input = QLineEdit("你的水印")
-        watermark_layout.addWidget(self.text_input)
+        self.watermark_text_input = QLineEdit("你的水印")
+        watermark_layout.addWidget(self.watermark_text_input)
         
         self.font_button = QPushButton("选择字体")
         watermark_layout.addWidget(self.font_button)
@@ -66,20 +66,26 @@ class Ui_MainWindow(object):
         layout_layout = QVBoxLayout(layout_tab)
         self.settings_tabs.addTab(layout_tab, "布局")
 
+        # Position Mode
+        layout_layout.addWidget(QLabel("位置模式"))
+        self.preset_pos_radio = QRadioButton("预设位置")
+        self.manual_drag_radio = QRadioButton("手动拖拽")
+        layout_layout.addWidget(self.preset_pos_radio)
+        layout_layout.addWidget(self.manual_drag_radio)
+
         # Position grid
         layout_layout.addWidget(QLabel("位置"))
-        position_grid = QHBoxLayout()
+        self.position_button_group = QButtonGroup(MainWindow)
+        position_grid = QGridLayout()
         positions = ["左上", "中上", "右上", 
                      "左中", "中", "右中",
                      "左下", "中下", "右下"]
-        self.pos_buttons = {}
         for i, pos in enumerate(positions):
             btn = QPushButton(pos)
-            self.pos_buttons[pos] = btn
-            position_grid.addWidget(btn)
-            if (i + 1) % 3 == 0:
-                layout_layout.addLayout(position_grid)
-                position_grid = QHBoxLayout()
+            btn.setCheckable(True)
+            self.position_button_group.addButton(btn, i)
+            position_grid.addWidget(btn, i // 3, i % 3)
+        layout_layout.addLayout(position_grid)
 
         # Rotation
         self.rotation_slider = QSlider(Qt.Horizontal)
@@ -96,16 +102,18 @@ class Ui_MainWindow(object):
         export_layout.addWidget(QLabel("输出文件夹"))
         self.output_folder_label = QLabel("未选择")
         export_layout.addWidget(self.output_folder_label)
-        self.select_output_button = QPushButton("选择文件夹")
-        export_layout.addWidget(self.select_output_button)
+        self.select_folder_button = QPushButton("选择文件夹")
+        export_layout.addWidget(self.select_folder_button)
 
         export_layout.addWidget(QLabel("文件命名"))
-        self.naming_prefix_input = QLineEdit()
-        self.naming_prefix_input.setPlaceholderText("前缀")
-        export_layout.addWidget(self.naming_prefix_input)
-        self.naming_suffix_input = QLineEdit()
-        self.naming_suffix_input.setPlaceholderText("后缀")
-        export_layout.addWidget(self.naming_suffix_input)
+        self.prefix_input = QLineEdit()
+        self.prefix_input.setPlaceholderText("前缀")
+        export_layout.addWidget(self.prefix_input)
+        self.suffix_input = QLineEdit()
+        self.suffix_input.setPlaceholderText("后缀")
+        export_layout.addWidget(self.suffix_input)
+        self.naming_example_label = QLabel("示例: 前缀文件名后缀.jpg")
+        export_layout.addWidget(self.naming_example_label)
 
         self.export_button = QPushButton("全部导出")
         export_layout.addWidget(self.export_button)
