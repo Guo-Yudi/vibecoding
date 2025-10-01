@@ -53,8 +53,11 @@ class PhotoWatermarkApp(QMainWindow, Ui_MainWindow):
 
     def add_file_to_list(self, file_path):
         icon = QIcon(file_path)
-        item = QListWidgetItem(icon, os.path.basename(file_path))
+        base_name = os.path.basename(file_path)
+        display_name = (base_name[:20] + '...') if len(base_name) > 20 else base_name
+        item = QListWidgetItem(icon, display_name)
         item.setData(Qt.UserRole, file_path)
+        item.setToolTip(base_name)
         self.image_list_widget.addItem(item)
 
     def add_files(self):
