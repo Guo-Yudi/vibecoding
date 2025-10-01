@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QListWidget, QTabWidget, QLineEdit, QSlider
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QSize
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -14,6 +14,11 @@ class Ui_MainWindow(object):
         left_panel = QVBoxLayout()
         self.image_list_widget = QListWidget()
         self.image_list_widget.setFixedWidth(200)
+        self.image_list_widget.setViewMode(QListWidget.IconMode)
+        self.image_list_widget.setIconSize(QSize(180, 180))
+        self.image_list_widget.setResizeMode(QListWidget.Adjust)
+        self.image_list_widget.setMovement(QListWidget.Static)
+        self.image_list_widget.setWordWrap(True)
         left_panel.addWidget(self.image_list_widget)
         
         import_buttons_layout = QHBoxLayout()

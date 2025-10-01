@@ -1,7 +1,7 @@
 import sys
 import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QColorDialog, QFontDialog
-from PyQt5.QtGui import QPixmap, QPainter, QColor, QFont, QFontMetrics
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QColorDialog, QFontDialog, QListWidgetItem
+from PyQt5.QtGui import QPixmap, QPainter, QColor, QFont, QFontMetrics, QIcon
 from PyQt5.QtCore import Qt, QPoint, QSettings
 
 from ui import Ui_MainWindow
@@ -51,21 +51,30 @@ class PhotoWatermarkApp(QMainWindow, Ui_MainWindow):
         self.preview_label.mouseMoveEvent = self.mouse_move_event
         self.preview_label.mouseReleaseEvent = self.mouse_release_event
 
+    def add_file_to_list(self, file_path):
+        icon = QIcon(file_path)
+        item = QListWidgetItem(icon, os.path.basename(file_path))
+        item.setData(Qt.UserRole, file_path)
+        self.image_list_widget.addItem(item)
+
     def add_files(self):
         files, _ = QFileDialog.getOpenFileNames(self, "选择图片", "", "图片文件 (*.png *.xpm *.jpg *.bmp *.tiff)")
         if files:
-            self.image_list_widget.addItems(files)
+            for file in files:
+                self.add_file_to_list(file)
 
     def add_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "选择文件夹")
         if folder:
             for f in os.listdir(folder):
                 if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
-                    self.image_list_widget.addItem(os.path.join(folder, f))
+                    self.add_file_to_list(os.path.join(folder, f))
 
     def on_image_selected(self, item):
-        self.current_pixmap = QPixmap(item.text())
-        self.update_preview()
+        if item:
+            file_path = item.data(Qt.UserRole)
+            self.current_pixmap = QPixmap(file_path)
+            self.update_preview()
 
     def update_preview(self):
         if not self.current_pixmap:
@@ -182,7 +191,8 @@ class PhotoWatermarkApp(QMainWindow, Ui_MainWindow):
         suffix = self.naming_suffix_input.text()
 
         for i in range(self.image_list_widget.count()):
-            item_path = self.image_list_widget.item(i).text()
+            item = self.image_list_widget.item(i)
+            item_path = item.data(Qt.UserRole)
             original_pixmap = QPixmap(item_path)
             
             # Create a pixmap with watermark
@@ -271,15 +281,12 @@ class PhotoWatermarkApp(QMainWindow, Ui_MainWindow):
                 file_path = str(url.toLocalFile())
                 if os.path.isfile(file_path):
                     if file_path.lower().endswith(('.png', '.xpm', '.jpg', '.jpeg', '.bmp', '.tiff')):
-                        files_to_add.append(file_path)
+                        self.add_file_to_list(file_path)
                 elif os.path.isdir(file_path):
                     for f in os.listdir(file_path):
                         full_path = os.path.join(file_path, f)
                         if os.path.isfile(full_path) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
-                            files_to_add.append(full_path)
-
-            if files_to_add:
-                self.image_list_widget.addItems(files_to_add)
+                            self.add_file_to_list(full_path)
         else:
             event.ignore()
 
