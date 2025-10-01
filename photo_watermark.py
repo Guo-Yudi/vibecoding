@@ -11,6 +11,7 @@ class PhotoWatermarkApp(QMainWindow, Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle("照片水印工具 2")
+        self.setAcceptDrops(True)
 
         self.current_pixmap = None
         self.watermark_text = "你的水印"
@@ -247,6 +248,40 @@ class PhotoWatermarkApp(QMainWindow, Ui_MainWindow):
         self.text_input.setText(self.watermark_text)
         # Sliders and other UI elements would be updated here
         self.update_preview()
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.setDropAction(Qt.CopyAction)
+            event.accept()
+            
+            files_to_add = []
+            for url in event.mimeData().urls():
+                file_path = str(url.toLocalFile())
+                if os.path.isfile(file_path):
+                    if file_path.lower().endswith(('.png', '.xpm', '.jpg', '.jpeg', '.bmp', '.tiff')):
+                        files_to_add.append(file_path)
+                elif os.path.isdir(file_path):
+                    for f in os.listdir(file_path):
+                        full_path = os.path.join(file_path, f)
+                        if os.path.isfile(full_path) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
+                            files_to_add.append(full_path)
+
+            if files_to_add:
+                self.image_list_widget.addItems(files_to_add)
+        else:
+            event.ignore()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
