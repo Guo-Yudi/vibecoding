@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QListWidget, QSlider, QLineEdit, QGridLayout, QRadioButton, QButtonGroup, QComboBox)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QListWidget, QSlider, QLineEdit, QGridLayout, QRadioButton, QButtonGroup, QComboBox, QFrame)
 from PyQt5.QtCore import Qt, QSize
 
 class Ui_MainWindow(object):
@@ -34,7 +34,7 @@ class Ui_MainWindow(object):
 
         # Right panel for settings
         right_panel = QVBoxLayout()
-        right_panel.setSpacing(20) # Set spacing for the main right panel layout
+        right_panel.setSpacing(15) # Set spacing for the main right panel layout
 
         # Watermark and Layout Settings
         watermark_layout_group = QWidget()
@@ -100,6 +100,12 @@ class Ui_MainWindow(object):
 
         right_panel.addWidget(watermark_layout_group)
 
+        # Separator
+        separator1 = QFrame()
+        separator1.setFrameShape(QFrame.HLine)
+        separator1.setFrameShadow(QFrame.Sunken)
+        right_panel.addWidget(separator1)
+
         # Export settings
         export_group = QWidget()
         export_layout = QVBoxLayout(export_group)
@@ -131,13 +137,30 @@ class Ui_MainWindow(object):
         
         right_panel.addWidget(export_group)
 
-        # Config management
+        # Separator
+        separator2 = QFrame()
+        separator2.setFrameShape(QFrame.HLine)
+        separator2.setFrameShadow(QFrame.Sunken)
+        right_panel.addWidget(separator2)
+
+        # Template management
+        template_group = QWidget()
+        template_layout = QVBoxLayout(template_group)
+        template_layout.setAlignment(Qt.AlignTop)
+        template_layout.setSpacing(10)
+
+        label_template_settings = QLabel("模板")
+        label_template_settings.setStyleSheet("font-weight: bold;")
+        template_layout.addWidget(label_template_settings)
+
         config_layout = QHBoxLayout()
         self.save_template_button = QPushButton("保存模板")
         self.load_template_button = QPushButton("加载模板")
         config_layout.addWidget(self.save_template_button)
         config_layout.addWidget(self.load_template_button)
-        right_panel.addLayout(config_layout)
+        template_layout.addLayout(config_layout)
+        
+        right_panel.addWidget(template_group)
 
         # Add panels to main layout
         main_layout.addLayout(left_panel)
