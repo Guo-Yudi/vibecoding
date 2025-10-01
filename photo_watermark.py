@@ -25,7 +25,9 @@ class PhotoWatermarkApp(QMainWindow):
         self.watermark_font = QFont("Arial", 20)
         self.watermark_color = QColor("white")
         self.watermark_opacity = 1.0
-        self.watermark_position = QPoint(10, 30)
+        self.watermark_position = "中"
+        self.watermark_pos = QPoint(0, 0)
+        self.watermark_position_mode = "预设位置"
         self.watermark_rotation = 0
         self.dragging = False
         self.drag_start_position = QPoint()
@@ -35,6 +37,7 @@ class PhotoWatermarkApp(QMainWindow):
 
         self.connect_signals()
         self.load_settings()
+        self.update_all_ui_from_settings()
 
     def connect_signals(self):
         self.ui.add_files_button.clicked.connect(self.add_files)
@@ -288,7 +291,7 @@ class PhotoWatermarkApp(QMainWindow):
             self.update_preview()
 
     def set_opacity(self, value):
-        self.watermark_opacity = value / 100.0
+        self.watermark_opacity = value / 255.0
         self.update_preview()
 
     def set_rotation(self, value):
@@ -328,7 +331,48 @@ class PhotoWatermarkApp(QMainWindow):
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        # ... (Apply watermark logic, same as in update_preview)
+        # Apply watermark logic, same as in update_preview
+        painter.setOpacity(self.watermark_opacity)
+        font_metrics = QFontMetrics(self.watermark_font)
+        text_width = font_metrics.width(self.watermark_text)
+        text_height = font_metrics.height()
+
+        # Position
+        if self.watermark_position_mode == "手动拖拽":
+            x = self.watermark_pos.x()
+            y = self.watermark_pos.y()
+        else:
+            if self.watermark_position == "左上":
+                x = 10
+                y = font_metrics.ascent() + 10
+            elif self.watermark_position == "右上":
+                x = pixmap.width() - text_width - 10
+                y = font_metrics.ascent() + 10
+            elif self.watermark_position == "左下":
+                x = 10
+                y = pixmap.height() - font_metrics.descent() - 10
+            elif self.watermark_position == "右下":
+                x = pixmap.width() - text_width - 10
+                y = pixmap.height() - font_metrics.descent() - 10
+            elif self.watermark_position == "中":
+                x = (pixmap.width() - text_width) / 2
+                y = (pixmap.height() + text_height) / 2 - font_metrics.descent()
+            elif self.watermark_position == "中上":
+                x = (pixmap.width() - text_width) / 2
+                y = font_metrics.ascent() + 10
+            elif self.watermark_position == "左中":
+                x = 10
+                y = (pixmap.height() + text_height) / 2 - font_metrics.descent()
+            elif self.watermark_position == "右中":
+                x = pixmap.width() - text_width - 10
+                y = (pixmap.height() + text_height) / 2 - font_metrics.descent()
+            elif self.watermark_position == "中下":
+                x = (pixmap.width() - text_width) / 2
+                y = pixmap.height() - font_metrics.descent() - 10
+            else: # Fallback
+                x = 10
+                y = 10
+
         if self.watermark_rotation != 0:
             transform = QTransform()
             center_x = x + text_width / 2
@@ -359,6 +403,30 @@ class PhotoWatermarkApp(QMainWindow):
             i += 1
 
         pixmap.save(save_path)
+
+    def update_all_ui_from_settings(self):
+        self.ui.watermark_text_input.setText(self.watermark_text)
+        self.ui.opacity_slider.setValue(int(self.watermark_opacity * 255))
+        self.ui.rotation_slider.setValue(self.watermark_rotation)
+
+        if self.watermark_position_mode == "预设位置":
+            self.ui.preset_pos_radio.setChecked(True)
+            for button in self.ui.position_button_group.buttons():
+                if button.text() == self.watermark_position:
+                    button.setChecked(True)
+                    break
+        else:
+            self.ui.manual_drag_radio.setChecked(True)
+
+        if self.output_folder:
+            self.ui.output_folder_label.setText(self.output_folder)
+        
+        prefix = self.settings.value("file_naming_prefix", "")
+        suffix = self.settings.value("file_naming_suffix", "")
+        self.ui.prefix_input.setText(prefix)
+        self.ui.suffix_input.setText(suffix)
+        self.update_file_naming_example()
+        self.update_preview()
 
     def save_template(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "保存模板", "", "模板文件 (*.ini)")
@@ -398,82 +466,18 @@ class PhotoWatermarkApp(QMainWindow):
         self.watermark_font = settings.value("watermark_font", QFont("Arial", 30))
         self.watermark_color = settings.value("watermark_color", QColor("white"))
         self.watermark_opacity = float(settings.value("watermark_opacity", 0.5))
-        self.watermark_position = settings.value("watermark_position", "右下")
+        self.watermark_position = settings.value("watermark_position", "中")
         self.watermark_position_mode = settings.value("watermark_position_mode", "预设位置")
-        pos_x = int(settings.value("watermark_pos_x", 10))
-        pos_y = int(settings.value("watermark_pos_y", 50))
-        self.watermark_pos = QPoint(pos_x, pos_y)
+        self.watermark_pos = QPoint(
+            int(settings.value("watermark_pos_x", 0)),
+            int(settings.value("watermark_pos_y", 0))
+        )
         self.watermark_rotation = int(settings.value("watermark_rotation", 0))
         self.output_folder = settings.value("output_folder", "")
-        self.file_naming_prefix = settings.value("file_naming_prefix", "")
-        self.file_naming_suffix = settings.value("file_naming_suffix", "")
+        # Note: file_naming_prefix and file_naming_suffix are loaded in update_all_ui_from_settings
 
-    def update_all_ui_from_settings(self):
-        self.ui.watermark_text_input.setText(self.watermark_text)
-        self.ui.opacity_slider.setValue(int(self.watermark_opacity * 100))
-        self.ui.rotation_slider.setValue(self.watermark_rotation)
-        self.ui.output_folder_label.setText(self.output_folder)
-        self.ui.prefix_input.setText(self.file_naming_prefix)
-        self.ui.suffix_input.setText(self.file_naming_suffix)
-
-        # Update position UI
-        if self.watermark_position_mode == "手动拖拽":
-            self.ui.manual_drag_radio.setChecked(True)
-        else:
-            self.ui.preset_pos_radio.setChecked(True)
-            for button in self.ui.position_button_group.buttons():
-                if button.text() == self.watermark_position:
-                    button.setChecked(True)
-                    break
-        self.update_preview()
-
-    def connect_signals(self):
-        self.ui.add_files_button.clicked.connect(self.add_files)
-        self.ui.add_folder_button.clicked.connect(self.add_folder)
-        self.ui.image_list_widget.currentItemChanged.connect(self.on_image_list_selection_changed)
-
-        # Watermark Tab
-        self.ui.watermark_text_input.textChanged.connect(self.update_watermark_text)
-        self.ui.font_button.clicked.connect(self.choose_font)
-        self.ui.color_button.clicked.connect(self.choose_color)
-        self.ui.opacity_slider.valueChanged.connect(self.set_opacity)
-
-        # Layout Tab
-        self.ui.rotation_slider.valueChanged.connect(self.set_rotation)
-        self.ui.position_button_group.buttonClicked.connect(self.set_watermark_position)
-        self.ui.preset_pos_radio.toggled.connect(lambda: self.set_watermark_position_mode("预设位置"))
-        self.ui.manual_drag_radio.toggled.connect(lambda: self.set_watermark_position_mode("手动拖拽"))
-
-        # Export Tab
-        self.ui.select_folder_button.clicked.connect(self.select_output_folder)
-        self.ui.prefix_input.textChanged.connect(self.update_file_naming_example)
-        self.ui.suffix_input.textChanged.connect(self.update_file_naming_example)
-        self.ui.export_button.clicked.connect(self.export_all)
-
-        # Template buttons
-        self.ui.save_template_button.clicked.connect(self.save_template)
-        self.ui.load_template_button.clicked.connect(self.load_template)
-
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-
-    def dragMoveEvent(self, event):
-        event.acceptProposedAction()
-
-    def dropEvent(self, event):
-        for url in event.mimeData().urls():
-            file_path = url.toLocalFile()
-            if os.path.isdir(file_path):
-                self.add_folder_from_drop(file_path)
-            else:
-                if file_path.lower().endswith(('.png', '.xpm', '.jpg', '.jpeg', '.bmp', '.tiff')):
-                    self.add_file_to_list(file_path)
-
-    def add_folder_from_drop(self, folder_path):
-        for file_name in os.listdir(folder_path):
-            if file_name.lower().endswith(('.png', '.xpm', '.jpg', '.jpeg', '.bmp', '.tiff')):
-                self.add_file_to_list(os.path.join(folder_path, file_name))
+    def closeEvent(self, event):
+        self.save_settings()
 
 
 if __name__ == '__main__':

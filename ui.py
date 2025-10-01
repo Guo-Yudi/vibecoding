@@ -34,50 +34,40 @@ class Ui_MainWindow(object):
 
         # Right panel for settings
         right_panel = QVBoxLayout()
-        self.settings_tabs = QTabWidget()
-        
-        # Watermark settings tab
-        watermark_tab = QWidget()
-        watermark_layout = QVBoxLayout(watermark_tab)
-        self.settings_tabs.addTab(watermark_tab, "水印")
-        
+
+        # Watermark and Layout Settings
+        watermark_layout_group = QWidget()
+        watermark_layout = QVBoxLayout(watermark_layout_group)
+        watermark_layout.setAlignment(Qt.AlignTop)
+
         # Text watermark settings
-        watermark_layout.addWidget(QLabel("文字水印"))
+        watermark_layout.addWidget(QLabel("水印内容"))
         self.watermark_text_input = QLineEdit("你的水印")
         watermark_layout.addWidget(self.watermark_text_input)
-        
+
+        font_color_layout = QHBoxLayout()
         self.font_button = QPushButton("选择字体")
-        watermark_layout.addWidget(self.font_button)
-        
         self.color_button = QPushButton("选择颜色")
-        watermark_layout.addWidget(self.color_button)
+        font_color_layout.addWidget(self.font_button)
+        font_color_layout.addWidget(self.color_button)
+        watermark_layout.addLayout(font_color_layout)
 
-        self.opacity_slider = QSlider(Qt.Horizontal)
-        self.opacity_slider.setRange(0, 100)
-        self.opacity_slider.setValue(100)
-        watermark_layout.addWidget(QLabel("不透明度"))
-        watermark_layout.addWidget(self.opacity_slider)
-
-        # Image watermark (placeholder)
-        watermark_layout.addWidget(QLabel("图片水印 (未实现)"))
+        # Layout settings
+        watermark_layout.addWidget(QLabel("布局与样式"))
         
-        # Layout settings tab
-        layout_tab = QWidget()
-        layout_layout = QVBoxLayout(layout_tab)
-        self.settings_tabs.addTab(layout_tab, "布局")
-
         # Position Mode
-        layout_layout.addWidget(QLabel("位置模式"))
+        pos_mode_layout = QHBoxLayout()
         self.preset_pos_radio = QRadioButton("预设位置")
         self.manual_drag_radio = QRadioButton("手动拖拽")
-        layout_layout.addWidget(self.preset_pos_radio)
-        layout_layout.addWidget(self.manual_drag_radio)
+        self.preset_pos_radio.setChecked(True)
+        pos_mode_layout.addWidget(self.preset_pos_radio)
+        pos_mode_layout.addWidget(self.manual_drag_radio)
+        watermark_layout.addLayout(pos_mode_layout)
 
         # Position grid
-        layout_layout.addWidget(QLabel("位置"))
         self.position_button_group = QButtonGroup(MainWindow)
         position_grid = QGridLayout()
-        positions = ["左上", "中上", "右上", 
+        positions = ["左上", "中上", "右上",
                      "左中", "中", "右中",
                      "左下", "中下", "右下"]
         for i, pos in enumerate(positions):
@@ -85,22 +75,31 @@ class Ui_MainWindow(object):
             btn.setCheckable(True)
             self.position_button_group.addButton(btn, i)
             position_grid.addWidget(btn, i // 3, i % 3)
-        layout_layout.addLayout(position_grid)
+        watermark_layout.addLayout(position_grid)
+
+        # Opacity
+        watermark_layout.addWidget(QLabel("不透明度"))
+        self.opacity_slider = QSlider(Qt.Horizontal)
+        self.opacity_slider.setRange(0, 255)
+        self.opacity_slider.setValue(255)
+        watermark_layout.addWidget(self.opacity_slider)
 
         # Rotation
+        watermark_layout.addWidget(QLabel("旋转"))
         self.rotation_slider = QSlider(Qt.Horizontal)
         self.rotation_slider.setRange(0, 360)
         self.rotation_slider.setValue(0)
-        layout_layout.addWidget(QLabel("旋转"))
-        layout_layout.addWidget(self.rotation_slider)
+        watermark_layout.addWidget(self.rotation_slider)
 
-        # Export settings tab
-        export_tab = QWidget()
-        export_layout = QVBoxLayout(export_tab)
-        self.settings_tabs.addTab(export_tab, "导出")
+        right_panel.addWidget(watermark_layout_group)
 
-        export_layout.addWidget(QLabel("输出文件夹"))
-        self.output_folder_label = QLabel("未选择")
+        # Export settings
+        export_group = QWidget()
+        export_layout = QVBoxLayout(export_group)
+        export_layout.setAlignment(Qt.AlignTop)
+
+        export_layout.addWidget(QLabel("导出设置"))
+        self.output_folder_label = QLabel("未选择输出文件夹")
         export_layout.addWidget(self.output_folder_label)
         self.select_folder_button = QPushButton("选择文件夹")
         export_layout.addWidget(self.select_folder_button)
@@ -117,6 +116,8 @@ class Ui_MainWindow(object):
 
         self.export_button = QPushButton("全部导出")
         export_layout.addWidget(self.export_button)
+        
+        right_panel.addWidget(export_group)
 
         # Config management
         config_layout = QHBoxLayout()
@@ -125,8 +126,6 @@ class Ui_MainWindow(object):
         config_layout.addWidget(self.save_template_button)
         config_layout.addWidget(self.load_template_button)
         right_panel.addLayout(config_layout)
-
-        right_panel.addWidget(self.settings_tabs)
 
         # Add panels to main layout
         main_layout.addLayout(left_panel)
