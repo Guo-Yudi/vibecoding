@@ -60,27 +60,3 @@ Photo Watermark 2
 		用户可以将当前的水印设置（包括水印内容、字体、颜色、位置、大小、透明度等所有参数）保存为一个模板。
 		用户可以加载、管理和删除已保存的模板。
 		程序启动时可自动加载上一次关闭时的设置或一个默认模板。
-
-## 如何生成 Windows 可执行文件
-
-要将此应用程序打包成一个独立的 Windows 可执行文件（`.exe`），您可以使用 `PyInstaller`。请按照以下步骤操作：
-
-1.  **安装 PyInstaller**：
-    如果您尚未安装 `PyInstaller`，请打开命令行并运行以下命令：
-    ```
-    pip install pyinstaller
-    ```
-
-2.  **打包应用程序**：
-    在命令行中，导航到项目的根目录（包含 `photo_watermark_2.py` 文件的目录），然后运行以下命令：
-    ```
-    python -m PyInstaller --onefile --windowed --name PhotoWatermark photo_watermark.py
-    ```
-    *   `--onefile`：将所有内容打包到一个单独的可执行文件中。
-    *   `--windowed`：在运行时隐藏命令行窗口。
-    *   `--name PhotoWatermark2`：设置生成的可执行文件的名称。
-
-3.  **找到可执行文件**：
-    `PyInstaller` 将在项目目录中创建一个 `dist` 文件夹。您可以在该文件夹中找到生成的 `PhotoWatermark2.exe` 文件。
-
-现在，您可以直接双击此 `.exe` 文件来运行应用程序，或将其分发给其他 Windows 用户。
