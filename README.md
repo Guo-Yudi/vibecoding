@@ -74,7 +74,7 @@ Photo Watermark 2
 2.  **打包应用程序**：
     在命令行中，导航到项目的根目录（包含 `photo_watermark_2.py` 文件的目录），然后运行以下命令：
     ```
-    pyinstaller --onefile --windowed --name PhotoWatermark2 photo_watermark.py
+    python -m PyInstaller --onefile --windowed --name PhotoWatermark photo_watermark.py
     ```
     *   `--onefile`：将所有内容打包到一个单独的可执行文件中。
     *   `--windowed`：在运行时隐藏命令行窗口。
