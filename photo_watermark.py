@@ -53,10 +53,10 @@ class PhotoWatermarkApp(QMainWindow):
         self.ui.save_template_button.clicked.connect(self.save_template)
         self.ui.load_template_button.clicked.connect(self.load_template)
 
-        self.ui.position_button_group.buttonClicked.connect(self.set_watermark_position)
+        self.ui.position_combo.currentTextChanged.connect(self.set_watermark_position)
 
-        self.ui.prefix_input.textChanged.connect(self.update_file_naming_example)
-        self.ui.suffix_input.textChanged.connect(self.update_file_naming_example)
+        self.ui.prefix_input.textChanged.connect(self.update_preview)
+        self.ui.suffix_input.textChanged.connect(self.update_preview)
 
         self.ui.preset_pos_radio.toggled.connect(
             lambda checked: self.set_watermark_position_mode("预设位置") if checked else None)
@@ -106,11 +106,7 @@ class PhotoWatermarkApp(QMainWindow):
         self.ui.watermark_text_input.setText("你的水印")
         self.watermark_text = "你的水印"
         self.watermark_position = "中"
-        # Find the radio button for "中" and set it
-        for button in self.ui.position_button_group.buttons():
-            if button.text() == "中":
-                button.setChecked(True)
-                break
+        self.ui.position_combo.setCurrentText("中")
         self.watermark_font = QFont()  # Reset to default font
         self.watermark_font.setPointSize(36) # Set default font size
         self.watermark_color = QColor("white")
@@ -268,10 +264,14 @@ class PhotoWatermarkApp(QMainWindow):
 
     def set_watermark_position_mode(self, text):
         self.watermark_position_mode = text
+        if text == "手动拖拽":
+            self.ui.position_combo.setEnabled(False)
+        else:
+            self.ui.position_combo.setEnabled(True)
         self.update_preview()
 
-    def set_watermark_position(self, button):
-        self.watermark_position = button.text()
+    def set_watermark_position(self, text):
+        self.watermark_position = text
         self.update_preview()
 
     def update_watermark_text(self, text):
@@ -303,12 +303,6 @@ class PhotoWatermarkApp(QMainWindow):
         if folder:
             self.output_folder = folder
             self.ui.output_folder_label.setText(folder)
-
-    def update_file_naming_example(self):
-        prefix = self.ui.prefix_input.text()
-        suffix = self.ui.suffix_input.text()
-        self.file_naming_example = f"{prefix}文件名{suffix}.jpg"
-        self.ui.naming_example_label.setText(self.file_naming_example)
 
     def export_all(self):
         if not self.output_folder:
@@ -411,12 +405,11 @@ class PhotoWatermarkApp(QMainWindow):
 
         if self.watermark_position_mode == "预设位置":
             self.ui.preset_pos_radio.setChecked(True)
-            for button in self.ui.position_button_group.buttons():
-                if button.text() == self.watermark_position:
-                    button.setChecked(True)
-                    break
+            self.ui.position_combo.setCurrentText(self.watermark_position)
+            self.ui.position_combo.setEnabled(True)
         else:
             self.ui.manual_drag_radio.setChecked(True)
+            self.ui.position_combo.setEnabled(False)
 
         if self.output_folder:
             self.ui.output_folder_label.setText(self.output_folder)
@@ -425,7 +418,6 @@ class PhotoWatermarkApp(QMainWindow):
         suffix = self.settings.value("file_naming_suffix", "")
         self.ui.prefix_input.setText(prefix)
         self.ui.suffix_input.setText(suffix)
-        self.update_file_naming_example()
         self.update_preview()
 
     def save_template(self):
@@ -466,7 +458,13 @@ class PhotoWatermarkApp(QMainWindow):
         self.watermark_font = settings.value("watermark_font", QFont("Arial", 30))
         self.watermark_color = settings.value("watermark_color", QColor("white"))
         self.watermark_opacity = float(settings.value("watermark_opacity", 0.5))
-        self.watermark_position = settings.value("watermark_position", "中")
+        
+        pos_val = settings.value("watermark_position", "中")
+        if isinstance(pos_val, QPoint):
+            self.watermark_position = "中"
+        else:
+            self.watermark_position = str(pos_val)
+
         self.watermark_position_mode = settings.value("watermark_position_mode", "预设位置")
         self.watermark_pos = QPoint(
             int(settings.value("watermark_pos_x", 0)),
