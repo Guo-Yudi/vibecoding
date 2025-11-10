@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Travel Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script type="text/javascript" src="https://api.map.baidu.com/api?v=1.0&type=webgl&ak=l8IZzVxMX1Pc882f2NEcZI6AsnlYysZl"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/map_init.js') }}"></script>
+</head>
+<body>
+    <div id="header">
+        <h1>AI Travel Planner</h1>
+    </div>
+    <div id="main-content">
+        <div id="left-panel">
+            <h2>功能列表</h2>
+            <div class="control-group">
+                <h3>地点搜索</h3>
+                <div id="search-container">
+                    <input type="text" id="search-input" placeholder="输入关键字...">
+                </div>
+            </div>
+            <div class="control-group">
+                <h3>用户定位</h3>
+                <button id="locate-btn">定位到当前位置</button>
+            </div>
+        </div>
+        <div id="container"></div>
+    </div>
+</body>
+</html>
