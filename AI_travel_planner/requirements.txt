@@ -1,11 +1,4 @@
-openai
-requests
-pandas
-matplotlib
-supabase
-firebase-admin
-python-decouple
 flask
-flask-cors
-flask-socketio
-jinja2
+python-dotenv
+openai>=1.44.0
+streamlit
