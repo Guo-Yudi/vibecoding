@@ -235,7 +235,7 @@ def generate():
     try:
         if DEEPSEEK_API_KEY:
             result_text = call_deepseek_api(prompt, model="deepseek-chat")
-            return jsonify({'result': result_text})
+            return jsonify({'plan': result_text})
         else:
             return jsonify({'error': '未找到API密钥。请将 DEEPSEEK_API_KEY 添加到您的 .env 文件中。'}), 500
     except Exception as e:

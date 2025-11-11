@@ -1,68 +1,50 @@
-document.getElementById('planner-form').addEventListener('submit', function(event) {
-    event.preventDefault();
+document.addEventListener('DOMContentLoaded', function () {
+    const planForm = document.getElementById('plan-form');
+    const loaderModal = document.getElementById('loader-modal');
+    const resultModal = document.getElementById('result-modal');
+    const resultText = document.getElementById('result-text');
+    const closeBtn = document.querySelector('.close-btn');
 
-    const form = event.target;
-    const data = {
-        destination: form.destination.value,
-        duration: form.duration.value,
-        budget: form.budget.value,
-        preferences: form.preferences.value
-    };
+    if (planForm) {
+        planForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            loaderModal.style.display = 'flex';
 
-    const loading = document.getElementById('loading');
-    const result = document.getElementById('result');
-    const planOutput = document.getElementById('plan-output');
+            const formData = new FormData(planForm);
 
-    loading.style.display = 'block';
-    result.style.display = 'none';
-
-    fetch('/plan', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-        loading.style.display = 'none';
-        if (data.error) {
-            alert('Error: ' + data.error);
-        } else {
-            planOutput.textContent = data.plan;
-            result.style.display = 'block';
-        }
-    })
-    .catch(error => {
-        loading.style.display = 'none';
-        alert('An error occurred. Please try again.');
-        console.error('Error:', error);
-    });
-});
-
-function route() {
-    const start = document.getElementById('start').value;
-    const end = document.getElementById('end').value;
-
-    if (!start || !end) {
-        alert('请输入起点和终点');
-        return;
+            fetch('/generate', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loaderModal.style.display = 'none';
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    const converter = new showdown.Converter();
+                    const html = converter.makeHtml(data.plan);
+                    resultText.innerHTML = html;
+                    resultModal.style.display = 'flex';
+                }
+            })
+            .catch(error => {
+                loaderModal.style.display = 'none';
+                alert('An error occurred. Please try again.');
+                console.error('Error:', error);
+            });
+        });
     }
 
-    map.clearOverlays();
-    const driving = new BMap.DrivingRoute(map, {
-        renderOptions: { map: map, autoViewport: true },
-        onSearchComplete: function (results) {
-            if (driving.getStatus() == BMAP_STATUS_SUCCESS) {
-                const plan = results.getPlan(0);
-                let output = "";
-                for (let i = 0; i < plan.getNumRoutes(); i++) {
-                    const route = plan.getRoute(i);
-                    output += `路线${i + 1}: ${route.getDistance(true)} (${route.getDuration(true)})\n`;
-                }
-                document.getElementById('plan-output').innerText += "\n" + output;
-            }
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function () {
+            resultModal.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('click', function (event) {
+        if (event.target == resultModal) {
+            resultModal.style.display = 'none';
         }
     });
-    driving.search(start, end);
-}
+});
