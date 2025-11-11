@@ -27,29 +27,29 @@ document.addEventListener('DOMContentLoaded', function () {
             // Navigation control (zoom)
             const navControl = new BMapGL.NavigationControl({
                 anchor: BMAP_ANCHOR_BOTTOM_RIGHT,
-                offset: new BMapGL.Size(10, 10)
+                offset: new BMapGL.Size(10, 50)
             });
             this.map.addControl(navControl);
 
             // Scale control
             const scaleControl = new BMapGL.ScaleControl({
                 anchor: BMAP_ANCHOR_BOTTOM_RIGHT,
-                offset: new BMapGL.Size(50, 20)
+                offset: new BMapGL.Size(60, 50)
             });
             this.map.addControl(scaleControl);
 
-            // Overview map control
-            const overviewControl = new BMapGL.OverviewMap({
-                anchor: BMAP_ANCHOR_TOP_RIGHT,
-                offset: new BMapGL.Size(10, 100),
-                isOpen: true
-            });
-            this.map.addControl(overviewControl);
+            // Overview map control (Temporarily disabled due to constructor error)
+            // const overviewControl = new BMapGL.OverviewMap({
+            //     anchor: BMAP_ANCHOR_TOP_RIGHT,
+            //     offset: new BMapGL.Size(10, 50),
+            //     isOpen: true
+            // });
+            // this.map.addControl(overviewControl);
 
             // Map type control
             const mapTypeControl = new BMapGL.MapTypeControl({
                 anchor: BMAP_ANCHOR_BOTTOM_RIGHT,
-                offset: new BMapGL.Size(10, 160)
+                offset: new BMapGL.Size(80, 50)
             });
             this.map.addControl(mapTypeControl);
         },
@@ -80,9 +80,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 this.map.enableScrollWheelZoom(true);
 
                 this._addControls();
-                this.map.setCurrentCity("北京"); // Required for map type switching
 
                 this._attachEventListeners();
+                this._setupMapSearch();
                 
                 // Make the app object globally accessible if needed by other scripts
                 window.mapApp = this;
@@ -104,6 +104,71 @@ document.addEventListener('DOMContentLoaded', function () {
                     this.locate();
                 });
             }
+        },
+
+        /**
+         * Sets up the map search functionality.
+         * @private
+         */
+        _setupMapSearch() {
+            const searchInput = document.getElementById('map-search-input');
+            const searchButton = document.getElementById('map-search-button');
+
+            if (!searchInput || !searchButton) {
+                console.error('Search bar elements not found.');
+                return;
+            }
+
+            // Initialize Autocomplete
+            const autocomplete = new BMapGL.Autocomplete({
+                input: searchInput,
+                location: this.map
+            });
+
+            // Listen for suggestion selection
+            autocomplete.addEventListener('onconfirm', (e) => {
+                const selectedSuggestion = e.item.value;
+                const fullText = selectedSuggestion.province + selectedSuggestion.city + selectedSuggestion.district + selectedSuggestion.street + selectedSuggestion.business;
+                searchInput.value = fullText;
+                this.search(fullText);
+            });
+
+            const performSearch = () => {
+                const query = searchInput.value.trim();
+                if (query) {
+                    this.search(query);
+                }
+            };
+
+            searchButton.addEventListener('click', performSearch);
+            searchInput.addEventListener('keyup', (event) => {
+                if (event.key === 'Enter') {
+                    performSearch();
+                }
+            });
+        },
+
+        /**
+         * Performs a local search on the map.
+         * @param {string} query - The search query.
+         */
+        search(query) {
+            if (!this.map) {
+                this.showError('Map is not initialized.');
+                return;
+            }
+
+            const local = new BMapGL.LocalSearch(this.map, {
+                renderOptions: { map: this.map, autoViewport: true },
+                onSearchComplete: (results) => {
+                    if (local.getStatus() !== BMAP_STATUS_SUCCESS) {
+                        this.showError('No results found for your search.');
+                        alert('未找到与“' + query + '”相关的地点。');
+                    }
+                    // No need to manually add markers as renderOptions handles it.
+                }
+            });
+            local.search(query);
         },
 
         /**
