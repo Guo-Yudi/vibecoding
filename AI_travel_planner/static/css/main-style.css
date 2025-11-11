@@ -196,3 +196,28 @@ html, body {
 .tangram-suggestion-main .tangram-suggestion-item-selected {
     background-color: #f0f0f0;
 }
+
+#save-plan-btn {
+    display: block;
+    margin: 20px auto 0 auto; /* 顶部外边距20px，左右自动实现居中 */
+    padding: 12px 24px; /* 增加内边距，让按钮更大 */
+    font-size: 1.1rem; /* 稍大字体 */
+    font-weight: bold; /* 粗体文字 */
+    color: #fff; /* 白色文字 */
+    background-color: #28a745; /* 醒目的绿色 */
+    border: none; /* 移除边框 */
+    border-radius: 5px; /* 圆角 */
+    cursor: pointer; /* 鼠标悬停指针 */
+    transition: background-color 0.3s ease, transform 0.2s ease; /* 过渡效果 */
+}
+
+#save-plan-btn:hover {
+    background-color: #218838; /* 鼠标悬停时深绿色 */
+    transform: translateY(-2px); /* 鼠标悬停时轻微上移 */
+}
+
+#save-plan-btn:disabled {
+    background-color: #6c757d; /* 禁用时使用灰色背景 */
+    cursor: not-allowed; /* 禁用时显示“不允许”光标 */
+    transform: none; /* 禁用时移除悬停效果 */
+}

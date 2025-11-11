@@ -8,12 +8,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const authForm = document.getElementById('auth-form');
     const authTitle = document.getElementById('auth-title');
     const authSubmitBtn = document.getElementById('auth-submit-btn');
+    const usernameGroup = document.getElementById('username-group');
     let isLoginMode = true;
 
     const openModal = (loginMode) => {
         isLoginMode = loginMode;
         authTitle.textContent = isLoginMode ? '登录' : '注册';
         authSubmitBtn.textContent = isLoginMode ? '登录' : '注册';
+        usernameGroup.style.display = isLoginMode ? 'none' : 'block';
         authModal.style.display = 'flex';
     };
 
@@ -30,10 +32,16 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-password').value;
+        
         if (isLoginMode) {
             await signInUser(email, password);
         } else {
-            await signUpUser(email, password);
+            const username = document.getElementById('auth-username').value;
+            if (!username) {
+                alert('请输入用户名！');
+                return;
+            }
+            await signUpUser(email, password, username);
         }
         closeModal();
     });
@@ -44,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const plansModal = document.getElementById('plans-modal');
     const closePlansModalBtn = document.querySelector('.plans-close');
     const plansList = document.getElementById('plans-list');
-    const aiResponseDiv = document.getElementById('ai-response');
+    const aiResponseDiv = document.getElementById('result-text');
 
     if(savePlanBtn) savePlanBtn.addEventListener('click', () => {
         const planContent = aiResponseDiv.innerHTML;

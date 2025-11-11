@@ -10,24 +10,35 @@ console.log('Supabase client initialized.');
 // --- Authentication Functions ---
 
 /**
- * Signs up a new user.
+ * Signs up a new user and creates a profile.
  * @param {string} email
  * @param {string} password
+ * @param {string} username
  * @returns {Promise<object|null>} The user object or null on error.
  */
-async function signUpUser(email, password) {
+async function signUpUser(email, password, username) {
     const { data, error } = await _supabase.auth.signUp({
         email: email,
         password: password,
+        options: {
+            data: {
+                username: username
+            }
+        }
     });
     if (error) {
         console.error('Error signing up:', error.message);
         alert('注册失败: ' + error.message);
         return null;
     }
-    console.log('Sign up successful, user:', data.user);
-    alert('注册成功！请检查您的邮箱以验证您的账户。');
-    return data.user;
+    if (data.user) {
+        console.log('Sign up successful, user:', data.user);
+        // The profile is now created by a trigger in Supabase.
+        
+        alert('注册成功！请检查您的邮箱以验证您的账户。');
+        return data.user;
+    }
+    return null;
 }
 
 /**

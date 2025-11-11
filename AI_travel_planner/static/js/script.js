@@ -1,14 +1,23 @@
 document.addEventListener('DOMContentLoaded', function () {
     const planForm = document.getElementById('plan-form');
-    const loaderModal = document.getElementById('loader-modal');
     const resultModal = document.getElementById('result-modal');
     const resultText = document.getElementById('result-text');
-    const closeBtn = document.querySelector('.close-btn');
+    const savePlanBtn = document.getElementById('save-plan-btn');
+    // Make the selector more specific to the result modal
+    const closeBtn = resultModal ? resultModal.querySelector('.close-btn') : null;
     
     if (planForm) {
         planForm.addEventListener('submit', function (event) {
             event.preventDefault();
-            loaderModal.style.display = 'flex';
+
+            // Show modal immediately with "Generating..." text and disable save button
+            if (resultModal && resultText) {
+                resultText.innerHTML = '生成中...';
+                resultModal.style.display = 'flex';
+                if (savePlanBtn) {
+                    savePlanBtn.disabled = true;
+                }
+            }
 
             const formData = new FormData(planForm);
 
@@ -18,19 +27,23 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(response => response.json())
             .then(data => {
-                loaderModal.style.display = 'none';
+                if (!resultText) return;
+
                 if (data.error) {
-                    alert('Error: ' + data.error);
+                    resultText.innerHTML = `<p style="color: red;">生成计划失败: ${data.error}</p>`;
+                    if (savePlanBtn) savePlanBtn.disabled = true; // Keep disabled on error
                 } else {
                     const converter = new showdown.Converter();
                     const html = converter.makeHtml(data.plan);
                     resultText.innerHTML = html;
-                    resultModal.style.display = 'flex';
+                    if (savePlanBtn) savePlanBtn.disabled = false; // Enable on success
                 }
             })
             .catch(error => {
-                loaderModal.style.display = 'none';
-                alert('An error occurred. Please try again.');
+                if (resultText) {
+                    resultText.innerHTML = '<p style="color: red;">发生未知错误，请稍后重试。</p>';
+                }
+                if (savePlanBtn) savePlanBtn.disabled = true; // Keep disabled on error
                 console.error('Error:', error);
             });
         });
@@ -38,7 +51,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (closeBtn) {
         closeBtn.addEventListener('click', function () {
-            resultModal.style.display = 'none';
+            if (resultModal) {
+                resultModal.style.display = 'none';
+            }
         });
     }
 
