@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Navigation control (zoom)
             const navControl = new BMapGL.NavigationControl({
                 anchor: BMAP_ANCHOR_BOTTOM_RIGHT,
+                type: BMAP_NAVIGATION_CONTROL_LARGE,
                 offset: new BMapGL.Size(10, 50)
             });
             this.map.addControl(navControl);
@@ -34,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Scale control
             const scaleControl = new BMapGL.ScaleControl({
                 anchor: BMAP_ANCHOR_BOTTOM_RIGHT,
-                offset: new BMapGL.Size(60, 50)
+                offset: new BMapGL.Size(70, 50)
             });
             this.map.addControl(scaleControl);
 
@@ -49,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Map type control
             const mapTypeControl = new BMapGL.MapTypeControl({
                 anchor: BMAP_ANCHOR_BOTTOM_RIGHT,
-                offset: new BMapGL.Size(80, 50)
+                offset: new BMapGL.Size(150, 0)
             });
             this.map.addControl(mapTypeControl);
         },
