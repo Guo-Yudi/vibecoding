@@ -85,10 +85,20 @@ html, body {
     font-size: 1.1em;
 }
 
-#mic-btn i {
-    transition: color 0.3s ease;
+.control-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 1rem; /* 与上方元素的间距 */
 }
 
-#mic-btn.recording i {
-    color: #e74c3c;
+.control-group .btn {
+    flex: 1; /* Each button will take up equal space */
+    padding: 0.75rem; /* 设置内边距 */
+    font-size: 1rem; /* 与输入框字体大小一致 */
+    text-align: center; /* 文字居中 */
+    background-color: #007bff; /* 设置背景为蓝色 */
+    color: white; /* 文字颜色为白色 */
+    border: none; /* 移除边框 */
+    border-radius: 4px; /* 圆角 */
+    cursor: pointer; /* 鼠标悬停时显示指针 */
 }
