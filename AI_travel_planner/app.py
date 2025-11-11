@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify
 
 from flask_sock import Sock
-from speech_recognition import run_asr
+from src.speech_recognition import run_asr
 
 load_dotenv()
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
@@ -20,7 +20,7 @@ XF_APPID = os.getenv("XF_APPID")
 XF_API_KEY = os.getenv("XF_API_KEY")
 XF_API_SECRET = os.getenv("XF_API_SECRET")
 
-app = Flask(__name__, template_folder='../templates', static_folder='../static')
+app = Flask(__name__, template_folder='templates', static_folder='static')
 sock = Sock(app)
 
 # ... (build_prompt 和 call_deepseek_api 函数保持不变)
@@ -216,7 +216,6 @@ def generate():
     budget = (request.form.get("budget") or "").strip()
     interests = (request.form.get("interests") or "").strip()
     people_raw = (request.form.get("people") or "").strip()
-    pace = (request.form.get("pace") or "").strip()
     dietary = (request.form.get("dietary") or "").strip()
 
     if not city:
@@ -231,7 +230,7 @@ def generate():
     except (ValueError, TypeError):
         people = 1
 
-    prompt = build_prompt(city, days, budget, interests, people=people, pace=pace, dietary=dietary)
+    prompt = build_prompt(city, days, budget, interests, people=people, dietary=dietary)
 
     try:
         if DEEPSEEK_API_KEY:

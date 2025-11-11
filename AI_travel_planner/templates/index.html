@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <title>AI Travel Planner</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main-style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/form-styles.css') }}">
-    <script type="text/javascript" src="https://api.map.baidu.com/api?v=1.0&type=webgl&ak=l8IZzVxMX1Pc882f2NEcZI6AsnlYysZl"></script>
+    <script type="text/javascript"
+        src="https://api.map.baidu.com/api?v=1.0&type=webgl&ak=l8IZzVxMX1Pc882f2NEcZI6AsnlYysZl"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/map_init.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/aiwindow-style.css') }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
 </head>
+
 <body>
     <div id="header">
         <h1>AI Travel Planner</h1>
@@ -23,44 +26,40 @@
             </div>
             <section class="card">
                 <form class="form" id="plan-form" method="POST" action="/generate">
-                <div class="form-grid">
-                    <div class="field">
-                    <label for="city">目的地</label>
-                    <input id="city" name="city" type="text" placeholder="e.g., Paris" required />
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="city">目的地</label>
+                            <input id="city" name="city" type="text" placeholder="e.g., Paris" required />
+                        </div>
+
+                        <div class="field">
+                            <label for="days">天数</label>
+                            <input id="days" name="days" type="number" min="1" max="21" placeholder="3" />
+                        </div>
+
+                        <div class="field">
+                            <label for="budget">预算</label>
+                            <input id="budget" name="budget" type="text" placeholder="e.g., 1000-2000" required />
+                        </div>
+
+                        <div class="field">
+                            <label for="people">人数（可选）</label>
+                            <input id="people" name="people" type="number" min="1" max="12" placeholder="1" />
+                        </div>
+
+                        <div class="field">
+                            <label for="dietary">饮食偏好（可选）</label>
+                            <input id="dietary" name="dietary" type="text" placeholder="素食, 清真, 素食, 无" />
+                        </div>
+
+                        <div class="field field-full">
+                            <label for="interests">兴趣爱好（可选）</label>
+                            <input id="interests" name="interests" type="text"
+                                placeholder="history, street food, museums, hidden gems" />
+                        </div>
                     </div>
 
-                    <div class="field">
-                    <label for="days">天数</label>
-                    <input id="days" name="days" type="number" min="1" max="21" placeholder="3" />
-                    </div>
-
-                    <div class="field">
-                    <label for="budget">预算</label>
-                    <input id="budget" name="budget" type="text" placeholder="e.g., 1000-2000" required />
-                    </div>
-
-                    <div class="field">
-                    <label for="people">人数（可选）</label>
-                    <input id="people" name="people" type="number" min="1" max="12" placeholder="1" />
-                    </div>
-
-                    <div class="field">
-                    <label for="dietary">饮食偏好（可选）</label>
-                    <input id="dietary" name="dietary" type="text" placeholder="素食, 清真, 素食, 无" />
-                    </div>
-
-                    <div class="field field-full">
-                    <label for="interests">兴趣爱好（可选）</label>
-                    <input
-                        id="interests"
-                        name="interests"
-                        type="text"
-                        placeholder="history, street food, museums, hidden gems"
-                    />
-                    </div>
-                </div>
-
-                <button class="btn" type="submit">生成</button>
+                    <button class="btn" type="submit">生成</button>
                 </form>
             </section>
         </div>
@@ -93,4 +92,5 @@
 
     <script src="{{ url_for('static', filename='js/speech.js') }}"></script>
 </body>
+
 </html>
