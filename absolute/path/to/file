@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Travel Planner</title>
+    <!-- 字体将通过 style.css 全局设置为"微软雅黑" -->
+    <!-- 引入自定义的 CSS 样式文件 -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/map-styles.css') }}">
+    
+    <!-- 引入百度地图 JS API: 请将 "你的AK值" 替换为您的百度地图API密钥 -->
+    <!-- 获取AK的方法: 登录百度地图开放平台(https://lbsyun.baidu.com/) -> 控制台 -> 创建应用 -> 复制访问应用(ak) -->
+    <script type="text/javascript"
+        src="https://api.map.baidu.com/api?v=1.0&&type=webgl&ak=l8IZzVxMX1Pc882f2NEcZI6AsnlYysZl">
+    </script>
+    <!-- 引入地图初始化脚本 -->
+    <script type="text/javascript" src="{{ url_for('static', filename='js/map_init.js') }}"></script>
+    <!-- 引入侧边栏控制脚本 -->
+    <script type="text/javascript" src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+</head>
+<body>
+    <!-- 百度地图容器 -->
+
+    <!-- 页面主内容容器 -->
+    <main class="container">
+        <div id="container">
+            <button id="locate-btn" class="locate-btn" title="定位到当前位置">
+                <i class="fas fa-location-arrow"></i>
+            </button>
+        </div>
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="brand-heading">AI Travel Planner</h1>
+                <p class="subtitle alt-subtitle">Plan smarter, travel cheaper, and explore more</p>
+            </div>
+            
+            <!-- Flask 闪现消息显示区域 -->
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="alert">
+                {% for msg in messages %}
+                <p>{{ msg }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <!-- 行程规划表单卡片 -->
+            <section class="card">
+                <form class="form" method="POST" action="/generate">
+                    <!-- 表单网格布局 -->
+                    <div class="form-grid">
+                        <!-- 城市输入字段 -->
+                        <div class="field">
+                            <label for="city">城市</label>
+                            <input id="city" name="city" type="text" placeholder="e.g., Paris" required />
+                        </div>
+
+                        <!-- 天数输入字段 -->
+                        <div class="field">
+                            <label for="days">天数</label>
+                            <input id="days" name="days" type="number" min="1" max="21" placeholder="3" />
+                        </div>
+
+                        <!-- 预算选择字段 -->
+                        <div class="field">
+                            <label for="budget">预算</label>
+                            <select id="budget" name="budget">
+                                <option value="budget">Budget</option>
+                                <option value="moderate" selected>Moderate</option>
+                                <option value="comfortable">Comfortable</option>
+                            </select>
+                        </div>
+
+                        <!-- 人数输入字段 (可选) -->
+                        <div class="field">
+                            <label for="people">人数</label>
+                            <input id="people" name="people" type="number" min="1" max="12" placeholder="1" />
+                        </div>
+
+                        <!-- 旅行节奏选择字段 (可选) -->
+                        <div class="field">
+                            <label for="pace">旅行节奏 (可选)</label>
+                            <select id="pace" name="pace">
+                                <option value="">Select pace</option>
+                                <option value="relaxed">Relaxed</option>
+                                <option value="balanced" selected>Balanced</option>
+                                <option value="packed">Packed</option>
+                            </select>
+                        </div>
+
+                        <!-- 饮食偏好输入字段 (可选) -->
+                        <div class="field">
+                            <label for="dietary">饮食偏好 (可选)</label>
+                            <input id="dietary" name="dietary" type="text" placeholder="vegetarian, halal, vegan, none" />
+                        </div>
+
+                        <!-- 兴趣输入字段 (占满整行) -->
+                        <div class="field field-full">
+                            <label for="interests">兴趣爱好 (可选)</label>
+                            <input
+                                id="interests"
+                                name="interests"
+                                type="text"
+                                placeholder="history, street food, museums, hidden gems"
+                            />
+                        </div>
+
+                        <!-- 结果显示区域 -->
+                        <div class="result-container">
+                            {% if result %}
+                            <section class="result">
+                                <div class="result-header">
+                                    <h2>Your Itinerary</h2>
+                                    <!-- 显示技术提供方 (如果存在) -->
+                                    {% if provider %}<span class="provider">Powered by {{ provider }}</span>{% endif %}
+                                </div>
+                                <article class="result-card">
+                                    <!-- 使用 safe 过滤器以渲染 HTML 格式的行程结果 -->
+                                    {{ result | safe }}
+                                </article>
+                            </section>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- 提交按钮 -->
+                    <button class="btn" type="submit">生成</button>
+                </form>
+            </section>
+        </aside>
+    </main>
+    
+    <!-- 简单的用户体验优化：页面加载后自动聚焦到城市输入框 -->
+    <script>
+        document.getElementById('city')?.focus();
+    </script>
+</body>
+</html>

@@ -1,10 +1,12 @@
+/* sidebar-styles.css - 专门用于侧边栏的样式文件 */
+
 :root {
   /* Dark purple theme */
   --bg1: #1e0935;
   --bg2: #2a0e4a;
   --bg3: #3b145f;
   --text: #e6e1ee;
-  --muted: #d90c0c;
+  --muted: #000000;
   --card: #24123d;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   --radius: 14px;
@@ -16,45 +18,12 @@
   box-sizing: border-box;
 }
 
-html, body {
-  height: 100%;
-}
 
-body {
-  margin: 0;
-  font-family: "Microsoft YaHei", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji';
-  color: var(--text);
-  background: radial-gradient(1000px 1000px at 10% 10%, rgba(255,255,255,0.05), transparent),
-              radial-gradient(800px 800px at 90% 20%, rgba(255,255,255,0.06), transparent),
-              linear-gradient(135deg, var(--bg1), var(--bg2), var(--bg3));
-  background-attachment: fixed;
-}
-
-.bg-gradient {
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(1000px 1000px at 10% 10%, rgba(255,255,255,0.15), transparent),
-              radial-gradient(800px 800px at 90% 20%, rgba(255,255,255,0.10), transparent);
-  pointer-events: none;
-}
-
-.container {
-  width: 100%;
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 32px 16px 60px;
-}
-
-.header {
+.sidebar-header {
   text-align: center;
-  color: var(--text);
   margin-bottom: 20px;
-}
-
-.header h1 {
-  margin: 0 0 8px 0;
-  font-size: 40px;
-  letter-spacing: 0.5px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Custom brand heading font preference */
@@ -64,11 +33,16 @@ body {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  margin: 0;
+  font-size: 24px;
 }
 
 .alt-subtitle {
   font-weight: 500;
   letter-spacing: 0.3px;
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 14px;
 }
 
 .subtitle {
@@ -83,18 +57,9 @@ body {
   border-radius: 12px;
   padding: 10px 14px;
   margin: 12px auto 0;
-  max-width: 740px;
 }
 
-.card {
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 24px;
-  margin: 24px auto;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
+/* 表单样式 */
 .form {
   display: flex;
   flex-direction: column;
@@ -121,7 +86,7 @@ body {
 .field input,
 .field select,
 .field textarea {
-  background: #1b0e2e;
+  background: #ffffff;
   color: var(--text);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
@@ -138,13 +103,10 @@ body {
   box-shadow: 0 0 0 4px rgba(183, 148, 244, 0.25);
 }
 
+/* 确保field-full占据整行 */
 .field-full {
   grid-column: span 12;
 }
-
-.form-grid .field:nth-child(1) { grid-column: span 6; }
-.form-grid .field:nth-child(2) { grid-column: span 2; }
-.form-grid .field:nth-child(3) { grid-column: span 4; }
 
 .btn {
   align-self: flex-start;
@@ -166,6 +128,7 @@ body {
   box-shadow: 0 12px 22px rgba(138, 92, 246, 0.35);
 }
 
+/* 结果显示区域样式 */
 .result {
   margin: 24px auto;
 }
@@ -175,6 +138,9 @@ body {
   justify-content: space-between;
   align-items: baseline;
   color: var(--text);
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .provider {
@@ -226,35 +192,197 @@ body {
   margin: 12px 0 8px;
 }
 
-/* Adjust grid spans for added fields */
-.form-grid .field:nth-child(1) { grid-column: span 4; }
-.form-grid .field:nth-child(2) { grid-column: span 2; }
-.form-grid .field:nth-child(3) { grid-column: span 3; }
-.form-grid .field:nth-child(4) { grid-column: span 3; }
-.form-grid .field:nth-child(5) { grid-column: span 4; }
-.form-grid .field:nth-child(6) { grid-column: span 8; }
-
-.footer {
-  text-align: center;
-  color: var(--text);
-  opacity: 0.9;
-  margin-top: 36px;
+/* 响应式设计 */
+/* 移除了 @media (max-width: 768px) 的响应式设计部分 */
+.sidebar {
+  width: 350px;
+  background: rgba(36, 18, 61, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 24px;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  top: 20px;
+  left: 20px;
+  bottom: 20px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  max-width: 350px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 720px) {
-  .header h1 {
-    font-size: 32px;
-  }
-  .card, .result-card {
-    padding: 18px;
-  }
-  .form-grid .field:nth-child(1),
-  .form-grid .field:nth-child(2),
-  .form-grid .field:nth-child(3) {
-    grid-column: span 12;
-  }
-  .btn {
-    width: 100%;
-  }
+.sidebar-header {
+  text-align: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Custom brand heading font preference */
+.brand-heading {
+  font-weight: 400;
+  background: linear-gradient(90deg, #d6b5ff, #c9a4ff, #b48bff);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  margin: 0;
+  font-size: 24px;
+}
+
+.alt-subtitle {
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.subtitle {
+  margin: 0;
+  opacity: 0.9;
+}
+
+.alert {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fca5a5;
+  border: 1px solid rgba(252, 165, 165, 0.35);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 12px auto 0;
+}
+
+/* 表单样式 */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field label {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.field input,
+.field select,
+.field textarea {
+  background: #ffffff;
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 15px;
+  outline: none;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: #b794f4;
+  box-shadow: 0 0 0 4px rgba(183, 148, 244, 0.25);
+}
+
+/* 确保field-full占据整行 */
+.field-full {
+  grid-column: span 12;
+}
+
+.btn {
+  align-self: flex-start;
+  background: var(--accent);
+  color: white;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 8px 16px rgba(138, 92, 246, 0.25);
+  transition: transform 0.06s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(138, 92, 246, 0.35);
+}
+
+/* 结果显示区域样式 */
+.result {
+  margin: 24px auto;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: var(--text);
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.provider {
+  background: rgba(138, 92, 246, 0.18);
+  color: #e9ddff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid rgba(138, 92, 246, 0.35);
+}
+
+.result-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 22px 8px;
+  line-height: 1.7;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.result-card p {
+  margin: 0 0 10px 0;
+}
+
+/* Style tables inside AI result */
+.result-card table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0 16px;
+}
+
+.result-card th,
+.result-card td {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
+  vertical-align: top;
+}
+
+.result-card th {
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 600;
+}
+
+.result-card tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.result-card h2, .result-card h3 {
+  margin: 12px 0 8px;
 }

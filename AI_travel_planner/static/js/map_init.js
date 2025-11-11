@@ -1,7 +1,7 @@
 // 地图初始化函数
 function initMap() {
     console.log('开始初始化地图...');
-    
+
     // 检查百度地图API是否加载成功
     if (typeof BMapGL === 'undefined') {
         console.error('百度地图API加载失败');
@@ -19,33 +19,66 @@ function initMap() {
         }
 
         // 创建地图实例
-        var map = new BMapGL.Map("container");
-        
+        var map = new BMapGL.Map("container", {
+            enableDragging: true,  // 启用拖动
+            enableScrollWheelZoom: true,  // 启用鼠标滚轮缩放
+            enablePinchToZoom: true  // 启用手势缩放
+        });
+
         // 设置中心点坐标和缩放级别 (北京天安门)
         var point = new BMapGL.Point(116.404, 39.915);
-        map.centerAndZoom(point, 12); // 调整缩放级别为12，显示更大范围
-        
-        // 启用地图拖动功能
+        map.centerAndZoom(point, 15);
+
+        // 再次确保启用地图拖动功能
         map.enableDragging(true);
-        
-        // 启用鼠标滚轮缩放
         map.enableScrollWheelZoom(true);
-        
-        // 启用手势缩放
         map.enablePinchToZoom(true);
 
-        // 添加地图控件
-        map.addControl(new BMapGL.ScaleControl());
-        map.addControl(new BMapGL.NavigationControl()); // 使用标准导航控件替代ZoomControl
-        map.addControl(new BMapGL.OverviewMapControl()); // 使用缩略地图控件替代CityListControl
-        
-        // 保存地图实例供其他模块使用
+        // 添加地图控件到右上角
+        // 设置控件位置为右上角
+        var topRight = {
+            anchor: BMAP_ANCHOR_TOP_RIGHT,
+            offset: new BMapGL.Size(10, 10)
+        };
+
+        // 添加导航控件（放大缩小按钮）
+        var navigationControl = new BMapGL.NavigationControl({
+            anchor: BMAP_ANCHOR_TOP_RIGHT,
+            offset: new BMapGL.Size(10, 10),
+            type: BMAP_NAVIGATION_CONTROL_ZOOM, // 显示缩放按钮
+            showZoomInfo: true
+        });
+        map.addControl(navigationControl);
+
+        // 添加比例尺控件
+        var scaleControl = new BMapGL.ScaleControl({
+            anchor: BMAP_ANCHOR_TOP_RIGHT,
+            offset: new BMapGL.Size(10, 60) // 在导航控件下方
+        });
+        map.addControl(scaleControl);
+
+        // 添加缩略图控件
+        var overviewMapControl = new BMapGL.OverviewMapControl({
+            anchor: BMAP_ANCHOR_TOP_RIGHT,
+            offset: new BMapGL.Size(10, 100), // 在比例尺控件下方
+            isOpen: true // 默认展开缩略图
+        });
+        map.addControl(overviewMapControl);
+
+        // 添加地图类型控件
+        var mapTypeControl = new BMapGL.MapTypeControl({
+            anchor: BMAP_ANCHOR_TOP_RIGHT,
+            offset: new BMapGL.Size(10, 160) // 在缩略图控件下方
+        });
+        map.addControl(mapTypeControl);
+        map.setCurrentCity("北京"); // 设置默认城市以启用地图类型切换功能
+
         window.mapInstance = map;
-        
+
         // 发送地图初始化完成事件
         const event = new CustomEvent('mapInitialized', { detail: { map: map } });
         window.dispatchEvent(event);
-        
+
         console.log('地图初始化完成');
     } catch (error) {
         console.error('地图初始化过程中发生错误:', error);
