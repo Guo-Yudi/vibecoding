@@ -1,103 +1,157 @@
-// 地图初始化函数
-function initMap() {
-    console.log('开始初始化地图...');
+document.addEventListener('DOMContentLoaded', function () {
+    /**
+     * Encapsulates all map-related functionality.
+     */
+    const mapApp = {
+        map: null,
+        container: document.getElementById('container'),
 
-    // 检查百度地图API是否加载成功
-    if (typeof BMapGL === 'undefined') {
-        console.error('百度地图API加载失败');
-        showMapError('地图API加载失败，请检查网络连接或API密钥');
-        return;
-    }
+        /**
+         * Displays an error message in the map container.
+         * @param {string} message - The error message to display.
+         */
+        showError(message) {
+            if (this.container) {
+                this.container.innerHTML = `<div style="color: white; text-align: center; padding-top: 50px;">${message}</div>`;
+            }
+            console.error(message);
+        },
 
-    try {
-        // 获取地图容器
-        var container = document.getElementById('container');
-        if (!container) {
-            console.error('未找到地图容器 #container');
-            showMapError('未找到地图容器');
-            return;
+        /**
+         * Adds all necessary controls to the map.
+         * @private
+         */
+        _addControls() {
+            if (!this.map) return;
+
+            // Navigation control (zoom)
+            const navControl = new BMapGL.NavigationControl({
+                anchor: BMAP_ANCHOR_BOTTOM_RIGHT,
+                offset: new BMapGL.Size(10, 10)
+            });
+            this.map.addControl(navControl);
+
+            // Scale control
+            const scaleControl = new BMapGL.ScaleControl({
+                anchor: BMAP_ANCHOR_BOTTOM_RIGHT,
+                offset: new BMapGL.Size(50, 20)
+            });
+            this.map.addControl(scaleControl);
+
+            // Overview map control
+            const overviewControl = new BMapGL.OverviewMap({
+                anchor: BMAP_ANCHOR_TOP_RIGHT,
+                offset: new BMapGL.Size(10, 100),
+                isOpen: true
+            });
+            this.map.addControl(overviewControl);
+
+            // Map type control
+            const mapTypeControl = new BMapGL.MapTypeControl({
+                anchor: BMAP_ANCHOR_BOTTOM_RIGHT,
+                offset: new BMapGL.Size(10, 160)
+            });
+            this.map.addControl(mapTypeControl);
+        },
+
+        /**
+         * Initializes the map.
+         */
+        init() {
+            console.log('Initializing map...');
+            if (typeof BMapGL === 'undefined') {
+                this.showError('Baidu Maps API failed to load. Please check your network or API key.');
+                return;
+            }
+            if (!this.container) {
+                this.showError('Map container #container not found.');
+                return;
+            }
+
+            try {
+                this.map = new BMapGL.Map(this.container);
+                const point = new BMapGL.Point(118.785186, 32.064004);
+                this.map.centerAndZoom(point, 17);
+
+                const marker = new BMapGL.Marker(point);
+                this.map.addOverlay(marker);
+
+                this.map.enableDragging(true);
+                this.map.enableScrollWheelZoom(true);
+
+                this._addControls();
+                this.map.setCurrentCity("北京"); // Required for map type switching
+
+                this._attachEventListeners();
+                
+                // Make the app object globally accessible if needed by other scripts
+                window.mapApp = this;
+
+                console.log('Map initialization complete.');
+            } catch (error) {
+                this.showError(`Map initialization failed: ${error.message}`);
+            }
+        },
+
+        /**
+         * Attaches event listeners to UI elements.
+         * @private
+         */
+        _attachEventListeners() {
+            const locateBtn = document.getElementById('locate-btn');
+            if (locateBtn) {
+                locateBtn.addEventListener('click', () => {
+                    this.locate();
+                });
+            }
+        },
+
+        /**
+         * Finds the user's current location and displays it on the map.
+         */
+        locate() {
+            if (!this.map) {
+                this.showError('Map is not initialized.');
+                return;
+            }
+            console.log('Attempting to locate user...');
+            const geolocation = new BMapGL.Geolocation();
+            geolocation.getCurrentPosition((r) => {
+                if (geolocation.getStatus() === BMAP_STATUS_SUCCESS) {
+                    const marker = new BMapGL.Marker(r.point);
+                    this.map.addOverlay(marker);
+                    this.map.panTo(r.point);
+                    console.log('User located at:', r.point);
+                    alert('定位成功！您的位置：' + r.point.lng + ',' + r.point.lat);
+                } else {
+                    this.showError('Geolocation failed. Status: ' + geolocation.getStatus());
+                    alert('定位失败，请检查浏览器权限或网络设置。');
+                }
+            });
+        },
+
+        /**
+         * Calculates and displays a driving route on the map.
+         * @param {string | BMapGL.Point} start - The starting point.
+         * @param {string | BMapGL.Point} end - The ending point.
+         */
+        driveRoute(start, end) {
+            if (!this.map) {
+                this.showError('Map is not initialized.');
+                return;
+            }
+            if (!start || !end) {
+                this.showError('Please provide both a start and end point for directions.');
+                return;
+            }
+            this.map.clearOverlays();
+            const driving = new BMapGL.DrivingRoute(this.map, {
+                renderOptions: { map: this.map, autoViewport: true }
+            });
+            driving.search(start, end);
         }
+    };
 
-        // 创建地图实例
-        var map = new BMapGL.Map("container", {
-            enableDragging: true,  // 启用拖动
-            enableScrollWheelZoom: true,  // 启用鼠标滚轮缩放
-            enablePinchToZoom: true  // 启用手势缩放
-        });
-
-        // 设置中心点坐标和缩放级别 (北京天安门)
-        var point = new BMapGL.Point(116.404, 39.915);
-        map.centerAndZoom(point, 15); // 调整缩放级别为12，显示更大范围
-        
-        // 启用地图拖动功能
-        map.enableDragging(true);
-        map.enableScrollWheelZoom(true);
-        map.enablePinchToZoom(true);
-
-        // 添加地图控件到右上角
-        // 设置控件位置为右上角
-        var topRight = {
-            anchor: BMAP_ANCHOR_TOP_RIGHT,
-            offset: new BMapGL.Size(10, 10)
-        };
-
-        // 添加导航控件（放大缩小按钮）
-        var navigationControl = new BMapGL.NavigationControl({
-            anchor: BMAP_ANCHOR_TOP_RIGHT,
-            offset: new BMapGL.Size(10, 10),
-            type: BMAP_NAVIGATION_CONTROL_ZOOM, // 显示缩放按钮
-            showZoomInfo: true
-        });
-        map.addControl(navigationControl);
-
-        // 添加比例尺控件
-        var scaleControl = new BMapGL.ScaleControl({
-            anchor: BMAP_ANCHOR_TOP_RIGHT,
-            offset: new BMapGL.Size(10, 60) // 在导航控件下方
-        });
-        map.addControl(scaleControl);
-
-        // 添加缩略图控件
-        var overviewMapControl = new BMapGL.OverviewMapControl({
-            anchor: BMAP_ANCHOR_TOP_RIGHT,
-            offset: new BMapGL.Size(10, 100), // 在比例尺控件下方
-            isOpen: true // 默认展开缩略图
-        });
-        map.addControl(overviewMapControl);
-
-        // 添加地图类型控件
-        var mapTypeControl = new BMapGL.MapTypeControl({
-            anchor: BMAP_ANCHOR_TOP_RIGHT,
-            offset: new BMapGL.Size(10, 160) // 在缩略图控件下方
-        });
-        map.addControl(mapTypeControl);
-        map.setCurrentCity("北京"); // 设置默认城市以启用地图类型切换功能
-
-        window.mapInstance = map;
-
-        // 发送地图初始化完成事件
-        const event = new CustomEvent('mapInitialized', { detail: { map: map } });
-        window.dispatchEvent(event);
-
-        console.log('地图初始化完成');
-    } catch (error) {
-        console.error('地图初始化过程中发生错误:', error);
-        showMapError('地图初始化失败: ' + error.message);
-    }
-}
-
-// 显示地图错误信息
-function showMapError(message) {
-    var container = document.getElementById('container');
-    if (container) {
-        container.innerHTML = '<div style="color: white; text-align: center; padding-top: 50px;">' + message + '</div>';
-    }
-}
-
-// 页面加载完成后初始化地图
-window.onload = function() {
-    // 延迟执行以确保DOM完全加载
-    setTimeout(function() {
-        initMap();
-    }, 100);
-};
+    // Initialize the map application
+    mapApp.init();
+});

@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const resultModal = document.getElementById('result-modal');
     const resultText = document.getElementById('result-text');
     const closeBtn = document.querySelector('.close-btn');
-
+    
     if (planForm) {
         planForm.addEventListener('submit', function (event) {
             event.preventDefault();

@@ -64,13 +64,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error("WebSocket Error:", error);
                     speechText.textContent = 'WebSocket 连接错误。';
                     isRecording = false;
-                    micBtn.textContent = '🎤';
+                    micBtn.textContent = '语音输入';
                 };
 
                 socket.onclose = () => {
                     console.log("WebSocket connection closed.");
                     isRecording = false;
-                    micBtn.textContent = '🎤';
+                    micBtn.textContent = '语音输入';
                 };
 
             })
