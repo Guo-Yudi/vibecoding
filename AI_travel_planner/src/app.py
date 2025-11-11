@@ -7,9 +7,106 @@ import json
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify
 
+from flask_sockets import Sockets
+from speech_recognition import run_asr
+
 load_dotenv()
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+# 科大讯飞 API 密钥
+XF_APPID = os.getenv("XF_APPID")
+XF_API_KEY = os.getenv("XF_API_KEY")
+XF_API_SECRET = os.getenv("XF_API_SECRET")
+
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
+sockets = Sockets(app)
+
+# ... (build_prompt 和 call_deepseek_api 函数保持不变)
+
+def extract_travel_info_from_text(text: str) -> dict:
+    """
+    使用 LLM 从文本中提取旅行计划的关键信息。
+    """
+    prompt = f"""
+    从以下文本中提取旅行计划的关键信息。文本是：“{text}”。
+
+    你需要提取以下信息：
+    - city (目的地城市)
+    - days (旅行天数)
+    - budget (预算)
+    - interests (兴趣爱好)
+    - people (人数)
+    - dietary (饮食偏好)
+
+    请严格以 JSON 格式返回提取的信息。如果某个信息在文本中没有提到，请将其值设为 null。
+    JSON对象应只包含这些键。
+    例如:
+    {{
+        "city": "巴黎",
+        "days": 5,
+        "budget": "2000元",
+        "interests": "历史, 美食",
+        "people": null,
+        "dietary": null
+    }}
+    """
+    try:
+        response_text = call_deepseek_api(prompt, model="deepseek-chat")
+        # AI 的返回可能包含在 Markdown 代码块中
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0]
+        extracted_info = json.loads(response_text)
+        return extracted_info
+    except Exception as e:
+        print(f"Error during NLU extraction: {e}")
+        return {}
+
+@sockets.route('/speech-to-text')
+def speech_to_text_socket(ws):
+    """处理实时语音转文本的 WebSocket 连接"""
+    if not all([XF_APPID, XF_API_KEY, XF_API_SECRET]):
+        ws.send(json.dumps({"error": "讯飞语音服务未配置。"}))
+        return
+
+    def audio_stream_generator():
+        while not ws.closed:
+            message = ws.receive()
+            if message:
+                yield message
+
+    try:
+        # run_asr 会将中间结果通过 ws 发送，并返回最终结果
+        final_text = run_asr(
+            audio_stream=audio_stream_generator(),
+            app_id=XF_APPID,
+            api_key=XF_API_KEY,
+            api_secret=XF_API_SECRET,
+            client_ws=ws
+        )
+        
+        # 将最终识别的完整文本发送给前端
+        if not ws.closed:
+            ws.send(json.dumps({"final_result": final_text}))
+
+    except Exception as e:
+        if not ws.closed:
+            ws.send(json.dumps({"error": f"语音识别或处理出错: {e}"}))
+    finally:
+        if not ws.closed:
+            ws.close()
+
+@app.route("/extract-info", methods=["POST"])
+def extract_info():
+    data = request.get_json()
+    text = data.get("text")
+    if not text:
+        return jsonify({"error": "No text provided."}), 400
+
+    extracted_info = extract_travel_info_from_text(text)
+
+    if extracted_info:
+        return jsonify({"extracted_info": extracted_info})
+    else:
+        return jsonify({"error": "Could not extract information from the text."}), 500
 
 def build_prompt(
     city: str,
@@ -17,7 +114,6 @@ def build_prompt(
     budget: str,
     interests: str,
     people: Optional[int] = None,
-    pace: Optional[str] = None,
     dietary: Optional[str] = None,
 ) -> str:
     """为 LLM 创建一个清晰、结构化的 prompt，要求输出 Markdown 格式。"""
@@ -25,7 +121,6 @@ def build_prompt(
     budget_text = budget.strip() or "尽可能少"
     city_text = city.strip()
     people_text = people if (isinstance(people, int) and people > 0) else 1
-    pace_text = (pace or "平衡").strip()
     dietary_text = (dietary or "忽略").strip()
 
     prompt = f"""
@@ -37,7 +132,6 @@ def build_prompt(
     - **人数:** {people_text}
     - **预算水平:** {budget_text}
     - **兴趣:** {interests_text}
-    - **旅行节奏:** {pace_text} (选项: 轻松 | 平衡 | 紧凑)
     - **饮食偏好:** {dietary_text}
 
     **输出要求（必须严格遵守，生成格式清晰的 Markdown 文本）：**
@@ -129,4 +223,8 @@ def generate():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8080)
+    from gevent import pywsgi
+    from geventwebsocket.handler import WebSocketHandler
+    server = pywsgi.WSGIServer(('127.0.0.1', 8080), app, handler_class=WebSocketHandler)
+    print("Server starting on http://127.0.0.1:8080")
+    server.serve_forever()

@@ -21,25 +21,74 @@ html, body {
 }
 #header {
   position: absolute;
-  top: 10px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 1);
   padding: 5px 15px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 #left-panel {
   position: absolute;
-  top: 70px; /* 留出header空间 */
-  left: 10px;
   width: 350px;
-  max-height: calc(100% - 80px); /* 限制最大高度 */
+  top: 10px;
+  bottom: 20px;
+  left: 10px;
+  max-height: calc(100% - 30px); /* 限制最大高度 */
   overflow-y: auto; /* 内容超出时滚动 */
   background: white;
   padding: 15px;
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   z-index: 10;
+}
+
+/* Speech Input Modal Styles */
+.modal-overlay {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.speech-feedback-container {
+    margin: 20px 0;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #f9f9f9;
+    min-height: 50px;
+}
+
+.speech-text {
+    margin: 0;
+    color: #333;
+    font-size: 1.1em;
+}
+
+#mic-btn i {
+    transition: color 0.3s ease;
+}
+
+#mic-btn.recording i {
+    color: #e74c3c;
 }

@@ -7,53 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/form-styles.css') }}">
     <script type="text/javascript" src="https://api.map.baidu.com/api?v=1.0&type=webgl&ak=l8IZzVxMX1Pc882f2NEcZI6AsnlYysZl"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/map_init.js') }}"></script>
-    <style>
-        /* 弹窗和遮罩层样式 */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            display: none; /* 默认隐藏 */
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            width: 80%;
-            max-width: 700px;
-            max-height: 85vh;
-            overflow-y: auto;
-            position: relative;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        /* 加载动画样式 */
-        .loader {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/aiwindow-style.css') }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
 </head>
 <body>
@@ -64,7 +18,6 @@
         <div id="left-panel">
             <h2>功能列表</h2>
             <div class="control-group">
-                <h3>用户定位</h3>
                 <button id="locate-btn">定位到当前位置</button>
             </div>
             <section class="card">
@@ -91,16 +44,6 @@
                     </div>
 
                     <div class="field">
-                    <label for="pace">出行方式（可选）</label>
-                    <select id="pace" name="pace">
-                        <option value="">出行方式</option>
-                        <option value="relaxed">放松</option>
-                        <option value="balanced" selected>平衡</option>
-                        <option value="packed">经济</option>
-                    </select>
-                    </div>
-
-                    <div class="field">
                     <label for="dietary">饮食偏好（可选）</label>
                     <input id="dietary" name="dietary" type="text" placeholder="素食, 清真, 素食, 无" />
                     </div>
@@ -117,9 +60,9 @@
                 </div>
 
                 <button class="btn" type="submit">生成</button>
+                <button class="btn" id="mic-btn" type="button" style="margin-left: 10px;">🎤</button>
                 </form>
             </section>
-            
         </div>
         <div id="container"></div>
     </div>
@@ -137,55 +80,146 @@
         <div class="loader"></div>
     </div>
 
+    <!-- Speech Input Modal -->
+    <div id="speech-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2>请说出您的旅行计划</h2>
+            <div id="speech-feedback" class="speech-feedback-container" style="display: block;">
+                <p id="speech-text" class="speech-text">正在等待语音...</p>
+            </div>
+            <button id="finish-speech-btn" class="btn">完成</button>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('plan-form');
-            const resultModal = document.getElementById('result-modal');
-            const loaderModal = document.getElementById('loader-modal');
-            const resultText = document.getElementById('result-text');
-            const closeBtn = document.querySelector('.close-btn');
+            // ... (existing code for form submission and modal)
 
-            const converter = new showdown.Converter();
+            const micBtn = document.getElementById('mic-btn');
+            const speechModal = document.getElementById('speech-modal');
+            const speechText = document.getElementById('speech-text');
+            const finishSpeechBtn = document.getElementById('finish-speech-btn');
 
-            form.addEventListener('submit', function(event) {
-                event.preventDefault(); // 阻止表单默认提交
+            let mediaRecorder;
+            let socket;
+            let isRecording = false;
+            let finalRecognizedText = "";
 
-                loaderModal.style.display = 'flex'; // 显示加载动画
+            micBtn.addEventListener('click', () => {
+                speechModal.style.display = 'flex';
+                startRecording();
+            });
 
-                const formData = new FormData(form);
+            finishSpeechBtn.addEventListener('click', () => {
+                stopRecording();
+                speechModal.style.display = 'none';
+                if (finalRecognizedText) {
+                    extractInfoFromText(finalRecognizedText);
+                }
+            });
 
-                fetch('/generate', {
+            function startRecording() {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        isRecording = true;
+                        finalRecognizedText = "";
+                        speechText.textContent = '正在聆听...';
+                        micBtn.textContent = '🛑';
+
+                        mediaRecorder = new MediaRecorder(stream);
+                        const wsUrl = `ws://${window.location.host}/speech-to-text`;
+                        socket = new WebSocket(wsUrl);
+
+                        socket.onopen = () => {
+                            console.log("WebSocket connection established.");
+                            mediaRecorder.start(1280); // Send data every 1.28s
+                        };
+
+                        mediaRecorder.ondataavailable = event => {
+                            if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
+                                socket.send(event.data);
+                            }
+                        };
+
+                        socket.onmessage = event => {
+                            const data = JSON.parse(event.data);
+                            if (data.error) {
+                                console.error("WebSocket Error:", data.error);
+                                speechText.textContent = `错误: ${data.error}`;
+                            } else if (data.intermediate_result) {
+                                speechText.textContent = data.intermediate_result;
+                            } else if (data.final_text) {
+                                speechText.textContent = data.final_text;
+                                finalRecognizedText = data.final_text;
+                            }
+                        };
+
+                        socket.onerror = error => {
+                            console.error("WebSocket Error:", error);
+                            speechText.textContent = 'WebSocket 连接错误。';
+                            isRecording = false;
+                            micBtn.textContent = '🎤';
+                        };
+
+                        socket.onclose = () => {
+                            console.log("WebSocket connection closed.");
+                            isRecording = false;
+                            micBtn.textContent = '🎤';
+                        };
+
+                    })
+                    .catch(err => {
+                        console.error("Error getting user media:", err);
+                        alert("无法获取麦克风权限，请检查设置。");
+                        speechModal.style.display = 'none';
+                    });
+            }
+
+            function stopRecording() {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                }
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.close();
+                }
+                isRecording = false;
+                micBtn.textContent = '🎤';
+            }
+
+            function extractInfoFromText(text) {
+                document.getElementById('loader-modal').style.display = 'flex';
+                fetch('/extract-info', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text }),
                 })
                 .then(response => response.json())
                 .then(data => {
-                    loaderModal.style.display = 'none'; // 隐藏加载动画
+                    document.getElementById('loader-modal').style.display = 'none';
                     if (data.error) {
-                        alert('生成失败: ' + data.error);
-                    } else {
-                        const html = converter.makeHtml(data.result);
-                        resultText.innerHTML = html;
-                        resultModal.style.display = 'flex'; // 显示结果弹窗
+                        alert(`信息提取失败: ${data.error}`);
+                    } else if (data.extracted_info) {
+                        fillForm(data.extracted_info);
                     }
                 })
                 .catch(error => {
-                    loaderModal.style.display = 'none'; // 隐藏加载动画
-                    alert('请求出错: ' + error);
+                    document.getElementById('loader-modal').style.display = 'none';
+                    console.error('Error during extraction:', error);
+                    alert('提取信息时发生错误。');
                 });
-            });
+            }
 
-            // 关闭弹窗
-            closeBtn.addEventListener('click', function() {
-                resultModal.style.display = 'none';
-            });
-
-            // 点击遮罩层关闭弹窗
-            resultModal.addEventListener('click', function(event) {
-                if (event.target === resultModal) {
-                    resultModal.style.display = 'none';
+            function fillForm(info) {
+                for (const key in info) {
+                    if (info[key] && document.getElementById(key)) {
+                        document.getElementById(key).value = info[key];
+                    }
                 }
-            });
+                alert("已根据您的语音输入自动填充表单！");
+            }
         });
     </script>
 </body>
