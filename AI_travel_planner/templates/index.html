@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
     <title>AI Travel Planner</title>
+<<<<<<< HEAD
     <!-- 字体将通过 style.css 全局设置为"微软雅黑" -->
     <!-- 引入自定义的 CSS 样式文件 -->
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
@@ -129,8 +129,192 @@
     </main>
 
     <!-- 简单的用户体验优化：页面加载后自动聚焦到城市输入框 -->
+=======
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main-style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/form-styles.css') }}">
+    <script type="text/javascript" src="https://api.map.baidu.com/api?v=1.0&type=webgl&ak=l8IZzVxMX1Pc882f2NEcZI6AsnlYysZl"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/map_init.js') }}"></script>
+    <style>
+        /* 弹窗和遮罩层样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none; /* 默认隐藏 */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        /* 加载动画样式 */
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+</head>
+<body>
+    <div id="header">
+        <h1>AI Travel Planner</h1>
+    </div>
+    <div id="main-content">
+        <div id="left-panel">
+            <h2>功能列表</h2>
+            <div class="control-group">
+                <h3>用户定位</h3>
+                <button id="locate-btn">定位到当前位置</button>
+            </div>
+            <section class="card">
+                <form class="form" id="plan-form" method="POST" action="/generate">
+                <div class="form-grid">
+                    <div class="field">
+                    <label for="city">目的地</label>
+                    <input id="city" name="city" type="text" placeholder="e.g., Paris" required />
+                    </div>
+
+                    <div class="field">
+                    <label for="days">天数</label>
+                    <input id="days" name="days" type="number" min="1" max="21" placeholder="3" />
+                    </div>
+
+                    <div class="field">
+                    <label for="budget">预算</label>
+                    <input id="budget" name="budget" type="text" placeholder="e.g., 1000-2000" required />
+                    </div>
+
+                    <div class="field">
+                    <label for="people">人数（可选）</label>
+                    <input id="people" name="people" type="number" min="1" max="12" placeholder="1" />
+                    </div>
+
+                    <div class="field">
+                    <label for="pace">出行方式（可选）</label>
+                    <select id="pace" name="pace">
+                        <option value="">出行方式</option>
+                        <option value="relaxed">放松</option>
+                        <option value="balanced" selected>平衡</option>
+                        <option value="packed">经济</option>
+                    </select>
+                    </div>
+
+                    <div class="field">
+                    <label for="dietary">饮食偏好（可选）</label>
+                    <input id="dietary" name="dietary" type="text" placeholder="素食, 清真, 素食, 无" />
+                    </div>
+
+                    <div class="field field-full">
+                    <label for="interests">兴趣爱好（可选）</label>
+                    <input
+                        id="interests"
+                        name="interests"
+                        type="text"
+                        placeholder="history, street food, museums, hidden gems"
+                    />
+                    </div>
+                </div>
+
+                <button class="btn" type="submit">生成</button>
+                </form>
+            </section>
+            
+        </div>
+        <div id="container"></div>
+    </div>
+
+    <!-- 结果弹窗 -->
+    <div id="result-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div id="result-text"></div>
+        </div>
+    </div>
+
+    <!-- 加载动画弹窗 -->
+    <div id="loader-modal" class="modal-overlay">
+        <div class="loader"></div>
+    </div>
+
+>>>>>>> retry
     <script>
-        document.getElementById('city')?.focus();
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('plan-form');
+            const resultModal = document.getElementById('result-modal');
+            const loaderModal = document.getElementById('loader-modal');
+            const resultText = document.getElementById('result-text');
+            const closeBtn = document.querySelector('.close-btn');
+
+            const converter = new showdown.Converter();
+
+            form.addEventListener('submit', function(event) {
+                event.preventDefault(); // 阻止表单默认提交
+
+                loaderModal.style.display = 'flex'; // 显示加载动画
+
+                const formData = new FormData(form);
+
+                fetch('/generate', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loaderModal.style.display = 'none'; // 隐藏加载动画
+                    if (data.error) {
+                        alert('生成失败: ' + data.error);
+                    } else {
+                        const html = converter.makeHtml(data.result);
+                        resultText.innerHTML = html;
+                        resultModal.style.display = 'flex'; // 显示结果弹窗
+                    }
+                })
+                .catch(error => {
+                    loaderModal.style.display = 'none'; // 隐藏加载动画
+                    alert('请求出错: ' + error);
+                });
+            });
+
+            // 关闭弹窗
+            closeBtn.addEventListener('click', function() {
+                resultModal.style.display = 'none';
+            });
+
+            // 点击遮罩层关闭弹窗
+            resultModal.addEventListener('click', function(event) {
+                if (event.target === resultModal) {
+                    resultModal.style.display = 'none';
+                }
+            });
+        });
     </script>
 </body>
 </html>

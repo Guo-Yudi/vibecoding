@@ -27,9 +27,15 @@ function initMap() {
 
         // 设置中心点坐标和缩放级别 (北京天安门)
         var point = new BMapGL.Point(116.404, 39.915);
+<<<<<<< HEAD
         map.centerAndZoom(point, 15);
 
         // 再次确保启用地图拖动功能
+=======
+        map.centerAndZoom(point, 15); // 调整缩放级别为12，显示更大范围
+        
+        // 启用地图拖动功能
+>>>>>>> retry
         map.enableDragging(true);
         map.enableScrollWheelZoom(true);
         map.enablePinchToZoom(true);
