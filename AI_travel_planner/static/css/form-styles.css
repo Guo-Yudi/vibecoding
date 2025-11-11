@@ -1,0 +1,41 @@
+/* form-styles.css - 为表单字段设计的独立样式 */
+
+.form .form-grid {
+    display: block; /* 覆盖原有的grid布局，让子元素按块状排列 */
+}
+
+.form .field {
+    margin-bottom: 1.25rem; /* 增加字段之间的间距 */
+    display: flex; /* 使用flex布局 */
+    flex-direction: column; /* 垂直排列label和input */
+}
+
+.form .field label {
+    font-weight: bold; /* 字体加粗 */
+    margin-bottom: 0.5rem; /* label和input之间的间距 */
+    font-size: 0.9rem; /* 调整字体大小 */
+    text-align: left; /* 文本左对齐 */
+}
+
+.form .field input,
+.form .field select {
+    width: 100%; /* 占满父容器宽度 */
+    padding: 0.75rem; /* 增加内边距 */
+    border: 1px solid #ccc; /* 添加边框 */
+    border-radius: 4px; /* 圆角 */
+    box-sizing: border-box; /* 确保padding和border不增加宽度 */
+    font-size: 1rem; /* 设置输入字体大小 */
+}
+
+.form .btn {
+    width: 100%; /* 占满父容器宽度 */
+    padding: 0.75rem; /* 设置内边距 */
+    font-size: 1rem; /* 与输入框字体大小一致 */
+    text-align: center; /* 文字居中 */
+    background-color: #007bff; /* 设置背景为蓝色 */
+    color: white; /* 文字颜色为白色 */
+    border: none; /* 移除边框 */
+    border-radius: 4px; /* 圆角 */
+    cursor: pointer; /* 鼠标悬停时显示指针 */
+    margin-top: 1rem; /* 与上方元素的间距 */
+}
