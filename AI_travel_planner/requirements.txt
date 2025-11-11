@@ -2,6 +2,6 @@ flask
 python-dotenv
 openai>=1.44.0
 streamlit
-Flask-Sockets
 gevent
-gevent-websocket
+flask-sock
+websocket-client

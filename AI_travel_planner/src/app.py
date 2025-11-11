@@ -1,3 +1,6 @@
+from gevent import monkey
+monkey.patch_all()
+
 import os
 import textwrap
 from typing import Optional
@@ -7,7 +10,7 @@ import json
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify
 
-from flask_sockets import Sockets
+from flask_sock import Sock
 from speech_recognition import run_asr
 
 load_dotenv()
@@ -18,7 +21,7 @@ XF_API_KEY = os.getenv("XF_API_KEY")
 XF_API_SECRET = os.getenv("XF_API_SECRET")
 
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
-sockets = Sockets(app)
+sock = Sock(app)
 
 # ... (build_prompt 和 call_deepseek_api 函数保持不变)
 
@@ -60,39 +63,56 @@ def extract_travel_info_from_text(text: str) -> dict:
         print(f"Error during NLU extraction: {e}")
         return {}
 
-@sockets.route('/speech-to-text')
+@sock.route('/speech-to-text')
 def speech_to_text_socket(ws):
     """处理实时语音转文本的 WebSocket 连接"""
     if not all([XF_APPID, XF_API_KEY, XF_API_SECRET]):
-        ws.send(json.dumps({"error": "讯飞语音服务未配置。"}))
+        try:
+            ws.send(json.dumps({"error": "讯飞语音服务未配置。"}))
+        except Exception as e:
+            print(f"Error sending config error to client: {e}")
         return
 
-    def audio_stream_generator():
-        while not ws.closed:
-            message = ws.receive()
-            if message:
-                yield message
-
+    # 使用 try...finally 确保即使发生错误，资源也能被妥善处理
     try:
-        # run_asr 会将中间结果通过 ws 发送，并返回最终结果
+        def audio_stream_generator():
+            """一个生成器，从客户端WebSocket接收音频数据"""
+            while True:
+                try:
+                    message = ws.receive()
+                    if message is None:
+                        break
+                    yield message
+                except Exception as e:
+                    print(f"Error receiving from client: {e}")
+                    break
+
+        # 调用重构后的 run_asr
         final_text = run_asr(
             audio_stream=audio_stream_generator(),
             app_id=XF_APPID,
             api_key=XF_API_KEY,
             api_secret=XF_API_SECRET,
-            client_ws=ws
+            client_ws=ws  # 将前端的ws连接直接传递过去
         )
-        
-        # 将最终识别的完整文本发送给前端
-        if not ws.closed:
+
+        # 语音识别结束后，发送最终结果
+        # 注意：此时 run_asr 已经结束，讯飞的连接已经关闭
+        # 我们仍然可以尝试向我们的客户端发送最后的消息
+        if final_text:
             ws.send(json.dumps({"final_result": final_text}))
 
     except Exception as e:
-        if not ws.closed:
-            ws.send(json.dumps({"error": f"语音识别或处理出错: {e}"}))
+        # 捕获在 audio_stream_generator 或 run_asr 中可能发生的任何异常
+        print(f"An error occurred in speech_to_text_socket: {e}")
+        try:
+            # 尝试通知客户端发生了错误
+            ws.send(json.dumps({"error": f"语音处理过程中发生内部错误: {e}"}))
+        except Exception as send_e:
+            print(f"Failed to send error to client after an exception: {send_e}")
     finally:
-        if not ws.closed:
-            ws.close()
+        # flask-sock 会在上下文结束时自动关闭连接，这里不需要显式调用 ws.close()
+        print("WebSocket connection handler finished.")
 
 @app.route("/extract-info", methods=["POST"])
 def extract_info():
@@ -224,7 +244,6 @@ def generate():
 
 if __name__ == '__main__':
     from gevent import pywsgi
-    from geventwebsocket.handler import WebSocketHandler
-    server = pywsgi.WSGIServer(('127.0.0.1', 8080), app, handler_class=WebSocketHandler)
+    server = pywsgi.WSGIServer(('127.0.0.1', 8080), app)
     print("Server starting on http://127.0.0.1:8080")
     server.serve_forever()
