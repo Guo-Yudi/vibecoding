@@ -1,6 +1,7 @@
 flask
 python-dotenv
-streamlit
 gevent
 flask-sock
 websocket-client
+requests
+gunicorn
