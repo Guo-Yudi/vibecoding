@@ -1,173 +1,232 @@
-import websocket
+import base64
 import datetime
 import hashlib
-import base64
 import hmac
 import json
 from urllib.parse import urlencode
-import time
-import ssl
-from wsgiref.handlers import format_date_time
-from datetime import datetime
-from time import mktime
 import gevent
+from gevent import Greenlet
+from websocket import create_connection, WebSocketException
 
-# 讯飞实时语音转写服务的认证参数生成类
-class Ws_Param(object):
-    def __init__(self, APPID, APIKey, APISecret):
-        self.APPID = APPID
-        self.APIKey = APIKey
-        self.APISecret = APISecret
-        self.Host = "rtasr.xfyun.cn"
-        self.HttpProto = "HTTP/1.1"
-        self.RequestUri = "/v1/ws"
-        self.Algorithm = "hmac-sha256"
-        self.Headers = ["host", "date", "request-line"]
-        self.Url = f"wss://{self.Host}{self.RequestUri}"
-
-    def create_url(self):
-        """生成带鉴权参数的WebSocket URL"""
-        date = format_date_time(mktime(datetime.now().timetuple()))
-        signature_origin = f"host: {self.Host}\ndate: {date}\nGET {self.RequestUri} {self.HttpProto}"
-        signature_sha = hmac.new(self.APISecret.encode('utf-8'), signature_origin.encode('utf-8'), digestmod=hashlib.sha256).digest()
-        signature_sha_base64 = base64.b64encode(signature_sha).decode(encoding='utf-8')
-        authorization_origin = f'api_key="{self.APIKey}", algorithm="{self.Algorithm}", headers="{" ".join(self.Headers)}", signature="{signature_sha_base64}"'
-        authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode(encoding='utf-8')
-        v = {
-            "authorization": authorization,
-            "date": date,
-            "host": self.Host
-        }
-        url = self.Url + '?' + urlencode(v)
-        return url
-
-# 实时语音转写客户端
-class ASRClient:
-    def __init__(self, app_id, api_key, api_secret, audio_stream, client_ws):
+class ASRClient(Greenlet):
+    def __init__(self, app_id, api_key, api_secret, audio_queue, client_ws):
+        super().__init__()
         self.app_id = app_id
         self.api_key = api_key
         self.api_secret = api_secret
-        self.audio_stream = audio_stream
-        self.client_ws = client_ws  # 前端WebSocket连接
+        self.audio_queue = audio_queue
+        self.client_ws = client_ws
 
-        self.final_result = ""
-        self.sentence_buffer = {}
-        self.ws_app = None
-        self.ws_open = False
+        self.host = "iat-api.xfyun.cn"
+        self.request_url = "wss://iat-api.xfyun.cn/v2/iat"
+        self.ws = None
+        self.is_connected = False
+        self.full_transcript = ""
 
-    def on_message(self, ws, message):
-        """处理从讯飞服务器收到的消息"""
-        try:
-            msg = json.loads(message)
-            code = msg.get('code')
-            sid = msg.get('sid')
-            if code != 0:
-                errMsg = msg.get('message')
-                self.send_to_client({"error": f"ASR Error: {errMsg} (sid: {sid})"})
-                return
+    def _generate_auth_url(self):
+        """
+        Generates the authentication URL according to the iFlyTek documentation.
+        """
+        # 1. Generate date in RFC1123 format
+        date = datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT')
 
-            data = msg.get('data')
-            if data:
-                if data['action'] == 'result':
-                    res = data['data']['cn']['st']
-                    is_final = res['type'] == '1'
-                    
-                    # 实时拼接句子
-                    for part in res['rt']:
-                        for word_info in part['ws']:
-                            word = word_info['cw'][0]['w']
-                            self.sentence_buffer[part['sn']] = self.sentence_buffer.get(part['sn'], "") + word
-                    
-                    full_text = "".join([self.sentence_buffer[k] for k in sorted(self.sentence_buffer.keys())])
-                    
-                    # 发送中间结果到前端
-                    self.send_to_client({"intermediate_result": full_text})
+        # 2. Create the signature string
+        tmp_signature_origin = f"host: {self.host}\ndate: {date}\nGET /v2/iat HTTP/1.1"
+        
+        # 3. HMAC-SHA256 signing
+        signature_sha = hmac.new(self.api_secret.encode('utf-8'), tmp_signature_origin.encode('utf-8'),
+                                 digestmod=hashlib.sha256).digest()
+        signature_sha_base64 = base64.b64encode(signature_sha).decode('utf-8')
 
-                    if is_final:
-                        self.final_result = full_text
-                        # 如果需要，可以在这里处理最终结果的逻辑
-                        
-                elif data['action'] == 'error':
-                    self.send_to_client({"error": f"ASR Action Error: {data}"})
+        # 4. Create the authorization string
+        authorization_origin = f'api_key="{self.api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature_sha_base64}"'
+        authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode('utf-8')
 
-        except Exception as e:
-            print(f"ASR on_message exception: {e}")
-            self.send_to_client({"error": "ASR message parsing error."})
-
-    def on_error(self, ws, error):
-        """处理WebSocket错误"""
-        print(f"### ASR WebSocket Error ###: {error}")
-        self.send_to_client({"error": "ASR service connection error."})
-        self.ws_open = False
-
-    def on_close(self, ws, close_status_code, close_msg):
-        """处理WebSocket关闭事件"""
-        print(f"### ASR WebSocket Closed ### Code: {close_status_code}, Msg: {close_msg}")
-        self.ws_open = False
-        # 可以在这里通知前端连接已关闭
-        self.send_to_client({"status": "asr_closed"})
-
-
-    def on_open(self, ws):
-        """WebSocket连接建立后，启动音频发送协程"""
-        print("### ASR WebSocket Opened ###")
-        self.ws_open = True
-        gevent.spawn(self.send_audio_thread)
-
-    def send_audio_thread(self):
-        """在单独的协程中发送音频数据"""
-        # 发送业务参数
-        business_params = {
-            "common": {"app_id": self.app_id},
-            "business": {"domain": "iat", "language": "zh_cn", "accent": "mandarin", "sample_rate": "16000", "aue": "raw"},
-            "data": {"status": 0, "format": "audio/L16;rate=16000", "encoding": "raw", "audio": ""}
+        # 5. Build the final URL
+        v = {
+            "authorization": authorization,
+            "date": date,
+            "host": self.host
         }
-        self.ws_app.send(json.dumps(business_params))
+        url = self.request_url + '_?' + urlencode(v)
+        return url
 
-        # 持续发送音频流
-        for chunk in self.audio_stream:
-            if not self.ws_open:
-                print("ASR connection closed, stopping audio send.")
-                break
-            if not chunk:
-                break
-            self.ws_app.send(chunk, websocket.ABNF.OPCODE_BINARY)
-            gevent.sleep(0.04)  # 控制发送速率
-
-        # 发送结束帧
-        if self.ws_open:
-            end_frame = {"data": {"status": 2}}
-            self.ws_app.send(json.dumps(end_frame))
-            print("### Sent ASR end tag ###")
-
-    def send_to_client(self, data):
-        """安全地向前端发送数据"""
+    def connect(self):
+        """Establish WebSocket connection."""
         try:
-            if not self.client_ws.closed:
-                self.client_ws.send(json.dumps(data))
+            auth_url = self._generate_auth_url()
+            print(f"Connecting to: {auth_url}")
+            self.ws = create_connection(auth_url, timeout=10)
+            self.is_connected = True
+            print("Connection successful, ready to send audio.")
+            return True
+        except WebSocketException as e:
+            print(f"Connection failed: WebSocket error: {e}")
+            return False
+        except Exception as e:
+            print(f"Connection failed: Other error: {e}")
+            return False
+
+    def _recv_msg(self):
+        """Receive and process messages from the ASR server."""
+        while self.is_connected:
+            try:
+                msg_str = self.ws.recv()
+                if not msg_str:
+                    break
+                
+                msg = json.loads(msg_str)
+                code = msg.get('code')
+                if code != 0:
+                    errMsg = msg.get('message', 'Unknown error')
+                    print(f"ASR server error: {code} - {errMsg}")
+                    self.send_to_client(json.dumps({"error": f"ASR Error: {errMsg}"}))
+                    break
+
+                data = msg.get('data', {})
+                result = data.get('result', {})
+                status = data.get('status')
+
+                recognized_text = ""
+                ws = result.get('ws', [])
+                for i in ws:
+                    for w in i.get('cw', []):
+                        recognized_text += w.get('w', '')
+                
+                if status == 1: # Intermediate result
+                    intermediate_text = self.full_transcript + recognized_text
+                    print(f"实时中间结果: {intermediate_text}")
+                    self.send_to_client(json.dumps({"intermediate_result": intermediate_text}))
+                else: # Final (status=2) or single-sentence (status=0) result
+                    self.full_transcript += recognized_text
+                    print(f"实时最终结果: {self.full_transcript}")
+                    # Send as intermediate for a smoother UI update
+                    self.send_to_client(json.dumps({"intermediate_result": self.full_transcript}))
+
+                if status == 2:
+                    print("ASR session finished.")
+                    # Send the final complete text
+                    self.send_to_client(json.dumps({"final_text": self.full_transcript}))
+                    break
+
+            except WebSocketException as e:
+                print(f"Receiving error: Connection interrupted: {e}")
+                break
+            except Exception as e:
+                print(f"Receiving error: Unknown error: {e}")
+                break
+        self.close()
+
+    def send_to_client(self, message):
+        """Send message to the web client."""
+        try:
+            if self.client_ws and not self.client_ws.closed:
+                self.client_ws.send(message)
         except Exception as e:
             print(f"Failed to send to client: {e}")
 
-    def run(self):
-        """启动ASR客户端"""
-        wsParam = Ws_Param(APPID=self.app_id, APIKey=self.api_key, APISecret=self.api_secret)
-        wsUrl = wsParam.create_url()
-        
-        self.ws_app = websocket.WebSocketApp(
-            wsUrl,
-            on_message=self.on_message,
-            on_error=self.on_error,
-            on_close=self.on_close,
-            on_open=self.on_open
-        )
-        
-        # run_forever会阻塞，直到连接关闭
-        self.ws_app.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
-        
-        # 返回最终识别结果
-        return self.final_result
+    def _send_audio(self):
+        """Send audio data from the queue to the ASR server."""
+        # 1. Send business parameters frame
+        business_params = {
+            "common": {"app_id": self.app_id},
+            "business": {
+                "language": "zh_cn",
+                "domain": "iat",
+                "accent": "mandarin",
+                "dwa": "wpgs" # For punctuation
+            },
+            "data": {
+                "status": 0,
+                "format": "audio/L16;rate=16000",
+                "encoding": "raw",
+                "audio": ""
+            }
+        }
+        try:
+            self.ws.send(json.dumps(business_params))
+        except WebSocketException as e:
+            print(f"Failed to send business params: {e}")
+            self.close()
+            return
 
-# 主入口函数，供app.py调用
-def run_asr(app_id, api_key, api_secret, audio_stream, client_ws):
-    asr_client = ASRClient(app_id, api_key, api_secret, audio_stream, client_ws)
-    return asr_client.run()
+        # 2. Send audio frames
+        while self.is_connected:
+            try:
+                chunk = self.audio_queue.get(timeout=5)
+                if chunk is None:  # End of stream signal
+                    break
+                
+                # Base64 encode the audio chunk
+                audio_b64 = base64.b64encode(chunk).decode('utf-8')
+                
+                audio_frame = {
+                    "data": {
+                        "status": 1,
+                        "format": "audio/L16;rate=16000",
+                        "encoding": "raw",
+                        "audio": audio_b64
+                    }
+                }
+                self.ws.send(json.dumps(audio_frame))
+                gevent.sleep(0.04) # Simulate 40ms interval
+
+            except gevent.queue.Empty:
+                # Timeout waiting for audio, can happen if user pauses
+                print("Audio queue empty, continuing to wait...")
+                continue
+            except WebSocketException as e:
+                print(f"Audio sending error: WebSocket connection lost: {e}")
+                break
+            except Exception as e:
+                print(f"Audio sending loop error: {e}")
+                break
+
+        # 3. Send end frame
+        try:
+            end_frame = {
+                "data": {
+                    "status": 2,
+                    "format": "audio/L16;rate=16000",
+                    "encoding": "raw",
+                    "audio": ""
+                }
+            }
+            self.ws.send(json.dumps(end_frame))
+            print("Sent end-of-stream frame to ASR server.")
+        except WebSocketException as e:
+            print(f"Failed to send end frame: {e}")
+        finally:
+            print("Audio sending greenlet finished.")
+
+    def _run(self):
+        """Main greenlet execution: connect and manage I/O greenlets."""
+        if self.connect():
+            sender = Greenlet(self._send_audio)
+            receiver = Greenlet(self._recv_msg)
+            
+            sender.start()
+            receiver.start()
+            
+            gevent.joinall([sender, receiver])
+        
+        self.close()
+        print("ASR client greenlet has stopped.")
+        
+    def close(self):
+        """Safely close the WebSocket connections."""
+        if self.is_connected and self.ws:
+            self.is_connected = False
+            try:
+                if self.ws.connected:
+                    self.ws.close(status=1000, reason="Client closing")
+                print("ASR WebSocket connection closed.")
+            except Exception as e:
+                print(f"Error while closing ASR connection: {e}")
+        
+        if self.client_ws and not self.client_ws.closed:
+            try:
+                self.client_ws.close(1000, "ASR service finished")
+                print("Client WebSocket connection closed.")
+            except Exception as e:
+                print(f"Error while closing client connection: {e}")

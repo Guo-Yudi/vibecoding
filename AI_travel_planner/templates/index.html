@@ -128,11 +128,13 @@
     <!-- Speech Input Modal -->
     <div id="speech-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
+            <span id="speech-close-btn" class="close-btn">&times;</span>
             <h2>请说出您的旅行计划</h2>
             <div id="speech-feedback" class="speech-feedback-container" style="display: block;">
                 <p id="speech-text" class="speech-text">正在等待语音...</p>
             </div>
-            <button id="finish-speech-btn" class="btn">完成</button>
+            <button id="hold-to-talk-btn" class="btn">按住说话</button>
+            <button id="finish-speech-btn" class="btn" style="display: none;">完成</button>
         </div>
     </div>
 

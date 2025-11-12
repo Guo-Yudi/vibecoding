@@ -1,105 +1,185 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // ... (existing code for form submission and modal)
-
+document.addEventListener('DOMContentLoaded', function () {
     const micBtn = document.getElementById('mic-btn');
     const speechModal = document.getElementById('speech-modal');
+    const closeBtn = document.getElementById('speech-close-btn');
     const speechText = document.getElementById('speech-text');
-    const finishSpeechBtn = document.getElementById('finish-speech-btn');
+    const holdToTalkBtn = document.getElementById('hold-to-talk-btn');
+    const finishSpeechBtn = document.getElementById('finish-speech-btn'); // Keep for text extraction logic
 
-    let mediaRecorder;
     let socket;
+    let audioContext;
+    let microphone;
+    let pcmProcessorNode;
     let isRecording = false;
     let finalRecognizedText = "";
 
+    // Open the modal when the main mic button is clicked
     micBtn.addEventListener('click', () => {
         speechModal.style.display = 'flex';
-        startRecording();
+        speechText.textContent = '按住按钮开始说话...';
+        finalRecognizedText = ""; // Reset text
     });
 
+    // Close the modal
+    closeBtn.addEventListener('click', () => {
+        stopRecording(); // Ensure recording stops
+        speechModal.style.display = 'none';
+    });
+
+    // This button is hidden, but its logic is triggered after recording stops
     finishSpeechBtn.addEventListener('click', () => {
-        stopRecording();
         speechModal.style.display = 'none';
         if (finalRecognizedText) {
             extractInfoFromText(finalRecognizedText);
         }
     });
 
-    function startRecording() {
-        navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(stream => {
-                isRecording = true;
-                finalRecognizedText = "";
-                speechText.textContent = '正在聆听...';
-                micBtn.textContent = '🛑';
+    // --- Hold-to-Talk Event Listeners ---
+    holdToTalkBtn.addEventListener('mousedown', startRecording);
+    holdToTalkBtn.addEventListener('mouseup', stopRecording);
+    holdToTalkBtn.addEventListener('mouseleave', () => {
+        if (isRecording) {
+            stopRecording();
+        }
+    });
+    holdToTalkBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Prevent firing mouse events
+        startRecording();
+    });
+    holdToTalkBtn.addEventListener('touchend', stopRecording);
 
-                mediaRecorder = new MediaRecorder(stream);
-                const wsUrl = `ws://${window.location.host}/speech-to-text`;
-                socket = new WebSocket(wsUrl);
 
-                socket.onopen = () => {
-                    console.log("WebSocket connection established.");
-                    mediaRecorder.start(1280); // Send data every 1.28s
-                };
+    async function startRecording() {
+        if (isRecording) return;
+        isRecording = true;
+        finalRecognizedText = "";
+        speechText.textContent = '正在聆听...';
+        holdToTalkBtn.classList.add('recording'); // For visual feedback
 
-                mediaRecorder.ondataavailable = event => {
-                    if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
-                        socket.send(event.data);
-                    }
-                };
+        try {
+            // 1. Initialize WebSocket
+            const wsUrl = `ws://${window.location.host}/ws/audio`;
+            socket = new WebSocket(wsUrl);
 
-                socket.onmessage = event => {
-                    const data = JSON.parse(event.data);
-                    if (data.error) {
-                        console.error("WebSocket Error:", data.error);
-                        speechText.textContent = `错误: ${data.error}`;
-                    } else if (data.intermediate_result) {
-                        speechText.textContent = data.intermediate_result;
-                    } else if (data.final_text) {
-                        speechText.textContent = data.final_text;
-                        finalRecognizedText = data.final_text;
-                    }
-                };
-
-                socket.onerror = error => {
-                    console.error("WebSocket Error:", error);
-                    speechText.textContent = 'WebSocket 连接错误。';
+            socket.onopen = () => console.log("WebSocket connection established.");
+            socket.onerror = error => {
+                console.error("WebSocket Error:", error);
+                speechText.textContent = 'WebSocket 连接错误。';
+            };
+            socket.onclose = (event) => {
+                console.log("WebSocket connection closed.", event.reason);
+                if (isRecording) {
+                    // This indicates an unexpected closure.
                     isRecording = false;
-                    micBtn.textContent = '语音输入';
-                };
+                    holdToTalkBtn.classList.remove('recording');
+                    speechText.textContent = '连接意外关闭。';
+                }
+                // If the modal is still open when the socket closes, it means no final text was received,
+                // or the final text has been received and we are ready to close.
+                // We use the existing finish button's logic to handle both cases.
+                setTimeout(() => {
+                    if (speechModal.style.display === 'flex') {
+                        console.log("Closing modal via finishSpeechBtn logic on socket close.");
+                        finishSpeechBtn.click();
+                    }
+                }, 500); // Give a moment for any last messages to process.
+            };
+            socket.onmessage = event => {
+                const data = JSON.parse(event.data);
+                if (data.error) {
+                    console.error("WebSocket Error from server:", data.error);
+                    speechText.textContent = `错误: ${data.error}`;
+                } else if (data.intermediate_result) {
+                    speechText.textContent = data.intermediate_result;
+                    // Keep track of the latest text, even if it's intermediate
+                    finalRecognizedText = data.intermediate_result;
+                } else if (data.final_text) {
+                    speechText.textContent = data.final_text;
+                    finalRecognizedText = data.final_text;
+                    // When the final text arrives, the server will close the connection.
+                    // The `onclose` handler will then trigger the modal close and text extraction.
+                }
+            };
 
-                socket.onclose = () => {
-                    console.log("WebSocket connection closed.");
-                    isRecording = false;
-                    micBtn.textContent = '语音输入';
-                };
-
-            })
-            .catch(err => {
-                console.error("Error getting user media:", err);
-                alert("无法获取麦克风权限，请检查设置。");
-                speechModal.style.display = 'none';
+            // Wait for WebSocket to be open before starting audio
+            await new Promise((resolve, reject) => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    resolve();
+                } else {
+                    socket.onopen = resolve;
+                    socket.onerror = reject; // Reject if connection fails
+                }
             });
+
+            // 2. Initialize AudioContext and AudioWorklet
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: 16000
+            });
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000 } });
+            microphone = audioContext.createMediaStreamSource(stream);
+
+            await audioContext.audioWorklet.addModule('/static/js/pcm-processor.js');
+            pcmProcessorNode = new AudioWorkletNode(audioContext, 'pcm-processor');
+
+            // 3. Set up the processor to send data over WebSocket
+            pcmProcessorNode.port.onmessage = (event) => {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(event.data); // event.data is the Int16Array buffer (raw PCM)
+                }
+            };
+
+            // 4. Connect the audio graph
+            microphone.connect(pcmProcessorNode);
+
+        } catch (err) {
+            console.error("Error during recording setup:", err);
+            alert("无法启动录音功能，请检查麦克风权限和浏览器支持。\n" + err.message);
+            isRecording = false; // Reset state
+            speechText.textContent = '启动失败，请重试。';
+            holdToTalkBtn.classList.remove('recording');
+        }
     }
 
     function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        }
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.close();
-        }
+        if (!isRecording) return;
         isRecording = false;
-        micBtn.textContent = '语音输入';
+        speechText.textContent = '处理中...';
+        holdToTalkBtn.classList.remove('recording');
+
+        // Disconnect audio graph and stop tracks
+        if (microphone) {
+            microphone.mediaStream.getTracks().forEach(track => track.stop());
+            microphone.disconnect();
+            microphone = null;
+        }
+        if (pcmProcessorNode) {
+            pcmProcessorNode.disconnect();
+            pcmProcessorNode = null;
+        }
+        if (audioContext && audioContext.state !== 'closed') {
+            audioContext.close().then(() => console.log("AudioContext closed."));
+            audioContext = null;
+        }
+
+        // Close WebSocket
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            // Closing the socket from the client signals the server to finalize the ASR session.
+            // The server will send back any final text and then close the connection from its end.
+            // The client's `onclose` handler will then manage closing the modal.
+            socket.close(1000, "Client finished recording.");
+        } else {
+             console.log("Socket not open or already closed.");
+        }
+        // The setTimeout logic is now removed and handled by the `onclose` event.
     }
 
     function extractInfoFromText(text) {
+        // This function remains the same
         document.getElementById('loader-modal').style.display = 'flex';
         fetch('/extract-info', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: text }),
         })
         .then(response => response.json())
@@ -119,6 +199,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function fillForm(info) {
+        // This function remains the same
         for (const key in info) {
             if (info[key] && document.getElementById(key)) {
                 document.getElementById(key).value = info[key];
