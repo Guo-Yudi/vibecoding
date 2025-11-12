@@ -1,6 +1,7 @@
 from gevent import monkey
 monkey.patch_all()
 
+import gevent
 import os
 import json
 from gevent.queue import Queue
@@ -19,9 +20,9 @@ from src.speech_recognition import ASRClient
 load_dotenv()
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 # 科大讯飞 API 密钥
-XF_APPID = os.getenv("XF_APPID")
-XF_API_KEY = os.getenv("XF_API_KEY")
-XF_API_SECRET = os.getenv("XF_API_SECRET")
+XF_APPID = (os.getenv("XF_APPID") or "").strip()
+XF_API_KEY = (os.getenv("XF_API_KEY") or "").strip()
+XF_API_SECRET = (os.getenv("XF_API_SECRET") or "").strip()
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 sock = Sock(app)
@@ -105,9 +106,24 @@ def audio_socket(ws):
     except Exception as e:
         print(f"Error in WebSocket loop: {e}")
     finally:
-        # Signal the end of the audio stream
-        audio_queue.put(None)
+        # Give the ASR greenlet a moment to send the final result
+        gevent.sleep(2)
         print("WebSocket connection closed.")
+
+@app.route("/process-speech-text", methods=["POST"])
+def process_speech_text():
+    data = request.get_json()
+    text = data.get("text")
+    if not text:
+        return jsonify({"error": "No text provided."}), 400
+
+    extracted_info = extract_travel_info_from_text(text)
+
+    if extracted_info:
+        return jsonify({"extracted_info": extracted_info})
+    else:
+        return jsonify({"error": "Could not extract information from the text."}), 500
+
 
 @app.route("/extract-info", methods=["POST"])
 def extract_info():

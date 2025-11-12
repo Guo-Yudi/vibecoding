@@ -48,7 +48,7 @@ class ASRClient(Greenlet):
             "date": date,
             "host": self.host
         }
-        url = self.request_url + '_?' + urlencode(v)
+        url = self.request_url + '?' + urlencode(v)
         return url
 
     def connect(self):
@@ -86,26 +86,32 @@ class ASRClient(Greenlet):
                 data = msg.get('data', {})
                 result = data.get('result', {})
                 status = data.get('status')
-
-                recognized_text = ""
-                ws = result.get('ws', [])
-                for i in ws:
-                    for w in i.get('cw', []):
-                        recognized_text += w.get('w', '')
                 
-                if status == 1: # Intermediate result
-                    intermediate_text = self.full_transcript + recognized_text
-                    print(f"实时中间结果: {intermediate_text}")
-                    self.send_to_client(json.dumps({"intermediate_result": intermediate_text}))
-                else: # Final (status=2) or single-sentence (status=0) result
-                    self.full_transcript += recognized_text
-                    print(f"实时最终结果: {self.full_transcript}")
-                    # Send as intermediate for a smoother UI update
-                    self.send_to_client(json.dumps({"intermediate_result": self.full_transcript}))
+                current_text = ""
+                if result:
+                    ws = result.get('ws', [])
+                    for i in ws:
+                        for w in i.get('cw', []):
+                            current_text += w.get('w', '')
 
-                if status == 2:
-                    print("ASR session finished.")
-                    # Send the final complete text
+                if status != 2:
+                    # Intermediate result. This is always the full text so far.
+                    self.full_transcript = current_text
+                    if self.full_transcript:
+                        print(f"实时结果: {self.full_transcript}")
+                        self.send_to_client(json.dumps({"intermediate_result": self.full_transcript}))
+                else: # Final result
+                    # If the final message is just punctuation, append it to the transcript we've built so far.
+                    is_just_punctuation = len(current_text) > 0 and all(c in '。，？！.,?!' for c in current_text)
+                    
+                    if is_just_punctuation and self.full_transcript:
+                        self.full_transcript += current_text
+                    # If the final message has actual text, it's a final correction and should be trusted as the complete result.
+                    elif current_text:
+                        self.full_transcript = current_text
+                    # If the final message is empty, we just stick with what we have.
+
+                    print(f"ASR session finished. Final result: {self.full_transcript}")
                     self.send_to_client(json.dumps({"final_text": self.full_transcript}))
                     break
 
@@ -120,7 +126,7 @@ class ASRClient(Greenlet):
     def send_to_client(self, message):
         """Send message to the web client."""
         try:
-            if self.client_ws and not self.client_ws.closed:
+            if self.client_ws:
                 self.client_ws.send(message)
         except Exception as e:
             print(f"Failed to send to client: {e}")
@@ -224,7 +230,7 @@ class ASRClient(Greenlet):
             except Exception as e:
                 print(f"Error while closing ASR connection: {e}")
         
-        if self.client_ws and not self.client_ws.closed:
+        if self.client_ws:
             try:
                 self.client_ws.close(1000, "ASR service finished")
                 print("Client WebSocket connection closed.")

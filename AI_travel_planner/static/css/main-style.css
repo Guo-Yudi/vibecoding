@@ -277,6 +277,55 @@ html, body {
     color: white;
 }
 
+/* Speech Modal Confirmation Buttons */
+#speech-confirmation-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px; /* Increased gap */
+    margin-top: 20px;
+}
+
+#speech-confirmation-buttons .btn {
+    min-width: 120px; /* Increased width */
+    padding: 12px 24px;
+    font-size: 1.1em; /* Slightly larger font */
+    font-weight: 600;
+    border-radius: 25px; /* Pill-shaped */
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    outline: none;
+}
+
+#speech-confirmation-buttons .btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+#speech-confirmation-buttons .btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-confirm {
+    background-color: #28a745; /* Green */
+    color: white;
+}
+
+.btn-confirm:hover {
+    background-color: #218838;
+}
+
+.btn-cancel {
+    background-color: #6c757d; /* A more neutral grey */
+    color: white;
+}
+
+.btn-cancel:hover {
+    background-color: #5a6268;
+}
+
 /* Speech Modal Button Styles */
 #hold-to-talk-btn {
     width: 100px;

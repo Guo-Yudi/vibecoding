@@ -4,7 +4,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const closeBtn = document.getElementById('speech-close-btn');
     const speechText = document.getElementById('speech-text');
     const holdToTalkBtn = document.getElementById('hold-to-talk-btn');
-    const finishSpeechBtn = document.getElementById('finish-speech-btn'); // Keep for text extraction logic
+    const confirmationButtons = document.getElementById('speech-confirmation-buttons');
+    const confirmSpeechBtn = document.getElementById('confirm-speech-btn');
+    const cancelSpeechBtn = document.getElementById('cancel-speech-btn');
+    const finishSpeechBtn = document.getElementById('finish-speech-btn'); // This is now effectively replaced by the confirm/cancel buttons
 
     let socket;
     let audioContext;
@@ -16,8 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Open the modal when the main mic button is clicked
     micBtn.addEventListener('click', () => {
         speechModal.style.display = 'flex';
-        speechText.textContent = '按住按钮开始说话...';
-        finalRecognizedText = ""; // Reset text
+        resetSpeechUI();
     });
 
     // Close the modal
@@ -26,8 +28,53 @@ document.addEventListener('DOMContentLoaded', function () {
         speechModal.style.display = 'none';
     });
 
-    // This button is hidden, but its logic is triggered after recording stops
+    // New confirmation logic
+    function fillForm(info) {
+        for (const key in info) {
+            if (info[key] && document.getElementById(key)) {
+                document.getElementById(key).value = info[key];
+            }
+        }
+        alert("已根据您的语音输入自动填充表单！");
+    }
+
+    confirmSpeechBtn.addEventListener('click', () => {
+        if (finalRecognizedText) {
+            document.getElementById('loader-modal').style.display = 'flex';
+            fetch('/process-speech-text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: finalRecognizedText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.extracted_info) {
+                    fillForm(data.extracted_info);
+                } else {
+                    console.error('Failed to extract info from speech text:', data.error);
+                    alert('未能从语音中提取有效信息，请手动填写。');
+                }
+            })
+            .catch(error => {
+                console.error('Error processing speech text:', error);
+                alert('处理语音文本时出错，请手动填写。');
+            })
+            .finally(() => {
+                document.getElementById('loader-modal').style.display = 'none';
+                speechModal.style.display = 'none';
+            });
+        } else {
+            speechModal.style.display = 'none';
+        }
+    });
+
+    cancelSpeechBtn.addEventListener('click', () => {
+        speechModal.style.display = 'none';
+    });
+
+    // This button is hidden and its direct click logic is deprecated
     finishSpeechBtn.addEventListener('click', () => {
+        // This is now a fallback, primarily triggered by the socket closing
         speechModal.style.display = 'none';
         if (finalRecognizedText) {
             extractInfoFromText(finalRecognizedText);
@@ -74,15 +121,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     holdToTalkBtn.classList.remove('recording');
                     speechText.textContent = '连接意外关闭。';
                 }
-                // If the modal is still open when the socket closes, it means no final text was received,
-                // or the final text has been received and we are ready to close.
-                // We use the existing finish button's logic to handle both cases.
-                setTimeout(() => {
-                    if (speechModal.style.display === 'flex') {
-                        console.log("Closing modal via finishSpeechBtn logic on socket close.");
-                        finishSpeechBtn.click();
-                    }
-                }, 500); // Give a moment for any last messages to process.
+                // Transition to confirmation state when socket closes
+                showConfirmationButtons();
             };
             socket.onmessage = event => {
                 const data = JSON.parse(event.data);
@@ -141,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function stopRecording() {
+    async function stopRecording() {
         if (!isRecording) return;
         isRecording = false;
         speechText.textContent = '处理中...';
@@ -158,20 +198,38 @@ document.addEventListener('DOMContentLoaded', function () {
             pcmProcessorNode = null;
         }
         if (audioContext && audioContext.state !== 'closed') {
-            audioContext.close().then(() => console.log("AudioContext closed."));
+            await audioContext.close();
+            console.log("AudioContext closed.");
             audioContext = null;
         }
 
-        // Close WebSocket
+        // Notify the server that the audio stream is ending
         if (socket && socket.readyState === WebSocket.OPEN) {
-            // Closing the socket from the client signals the server to finalize the ASR session.
-            // The server will send back any final text and then close the connection from its end.
-            // The client's `onclose` handler will then manage closing the modal.
-            socket.close(1000, "Client finished recording.");
+            // The server will send back the final text and then close the connection.
+            // The client's `onclose` handler will then show the confirmation buttons.
+            socket.send(JSON.stringify({ end_stream: true }));
+            console.log("End of stream signal sent. Waiting for server to close connection.");
         } else {
-             console.log("Socket not open or already closed.");
+             console.log("Socket not open or already closed. Showing confirmation buttons directly.");
+             // If the socket is already closed, we can't send the end signal.
+             showConfirmationButtons();
         }
-        // The setTimeout logic is now removed and handled by the `onclose` event.
+    }
+
+    function showConfirmationButtons() {
+        holdToTalkBtn.style.display = 'none';
+        confirmationButtons.style.display = 'flex';
+        if (!finalRecognizedText) {
+            speechText.textContent = "未能识别到语音，请重试。";
+        }
+    }
+
+    function resetSpeechUI() {
+        speechText.textContent = '按住按钮开始说话...';
+        finalRecognizedText = "";
+        holdToTalkBtn.style.display = 'flex';
+        confirmationButtons.style.display = 'none';
+        holdToTalkBtn.classList.remove('recording');
     }
 
     function extractInfoFromText(text) {
