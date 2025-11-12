@@ -36,7 +36,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     const converter = new showdown.Converter();
                     const html = converter.makeHtml(data.plan);
                     resultText.innerHTML = html;
-                    if (savePlanBtn) savePlanBtn.disabled = false; // Enable on success
+                    // Always enable the save button on success, as the click handler will check for auth
+                    if (savePlanBtn) savePlanBtn.disabled = false; 
                 }
             })
             .catch(error => {

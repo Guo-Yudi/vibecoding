@@ -77,27 +77,28 @@ async function signOutUser() {
 
 // --- Auth State Change Listener ---
 
-_supabase.auth.onAuthStateChange((event, session) => {
-    console.log('Auth state changed:', event);
-    const authSection = document.getElementById('auth-section');
-    const userSection = document.getElementById('user-section');
-    const userEmailDisplay = document.getElementById('user-email-display');
-    const savePlanBtn = document.getElementById('save-plan-btn');
+document.addEventListener('DOMContentLoaded', function() {
+    _supabase.auth.onAuthStateChange((event, session) => {
+        console.log('Auth state changed:', event);
+        const authSection = document.getElementById('auth-section');
+        const userSection = document.getElementById('user-section');
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const savePlanBtn = document.getElementById('save-plan-btn');
 
-    if (event === 'SIGNED_IN' && session) {
-        // User is signed in
-        if (authSection) authSection.style.display = 'none';
-        if (userSection) userSection.style.display = 'flex';
-        if (userEmailDisplay) userEmailDisplay.textContent = session.user.email;
-        if (savePlanBtn) savePlanBtn.style.display = 'block'; // Show save button
-        
-        // Later, we will fetch user's plans here
-        // fetchAndDisplayPlans(); 
-    } else if (event === 'SIGNED_OUT') {
-        // User is signed out
-        if (authSection) authSection.style.display = 'flex';
-        if (userSection) userSection.style.display = 'none';
-        if (userEmailDisplay) userEmailDisplay.textContent = '';
-        if (savePlanBtn) savePlanBtn.style.display = 'none'; // Hide save button
+        if (event === 'SIGNED_IN' && session) {
+            // User is signed in
+            if (authSection) authSection.style.display = 'none';
+            if (userSection) userSection.style.display = 'flex';
+            if (userEmailDisplay) userEmailDisplay.textContent = session.user.email;
+            if (savePlanBtn) savePlanBtn.style.display = 'block'; // Show save button
+            
+        } else if (event === 'SIGNED_OUT') {
+            // User is signed out
+            if (authSection) authSection.style.display = 'flex';
+            if (userSection) userSection.style.display = 'none';
+            if (userEmailDisplay) userEmailDisplay.textContent = '';
+        // Keep save plan button visible, but its click handler will check for auth
+        if (savePlanBtn) savePlanBtn.style.display = 'block'; 
     }
+    });
 });

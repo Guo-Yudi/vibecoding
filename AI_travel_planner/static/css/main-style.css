@@ -88,6 +88,11 @@ html, body {
     align-items: center;
 }
 
+/* Ensure the auth modal is always on top */
+#auth-modal {
+    z-index: 1010;
+}
+
 .modal-content {
     background-color: #fefefe;
     margin: auto;
@@ -198,7 +203,6 @@ html, body {
 }
 
 #save-plan-btn {
-    display: block;
     margin: 20px auto 0 auto; /* 顶部外边距20px，左右自动实现居中 */
     padding: 12px 24px; /* 增加内边距，让按钮更大 */
     font-size: 1.1rem; /* 稍大字体 */
@@ -220,4 +224,49 @@ html, body {
     background-color: #6c757d; /* 禁用时使用灰色背景 */
     cursor: not-allowed; /* 禁用时显示“不允许”光标 */
     transform: none; /* 禁用时移除悬停效果 */
+}
+
+/* Plan List Styles */
+#plans-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.plan-item {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.plan-item:hover {
+    background-color: #f1f1f1;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.plan-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.plan-title {
+    font-size: 1.1em;
+    color: #333;
+    margin: 0;
+}
+
+.plan-date {
+    font-size: 0.85em;
+    color: #777;
+}
+
+.plan-city {
+    font-size: 0.9em;
+    color: #555;
+    margin: 0;
 }

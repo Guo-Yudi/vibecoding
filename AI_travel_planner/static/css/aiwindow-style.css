@@ -43,3 +43,9 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        #result-text.editable {
+            border: 2px dashed #007bff;
+            padding: 10px;
+            background-color: #f8f9fa;
+            min-height: 200px; /* Ensure it has some height even when empty */
+        }
