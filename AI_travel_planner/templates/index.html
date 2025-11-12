@@ -39,22 +39,22 @@
                     <div class="form-grid">
                         <div class="field">
                             <label for="city">目的地</label>
-                            <input id="city" name="city" type="text" placeholder="南京" required />
+                            <input id="city" name="city" type="text" placeholder="示例：南京（必填）" required />
                         </div>
 
                         <div class="field">
                             <label for="days">天数</label>
-                            <input id="days" name="days" type="number" min="1" max="21" placeholder="3" />
+                            <input id="days" name="days" type="number" min="1" max="21" placeholder="1" />
                         </div>
 
                         <div class="field">
                             <label for="budget">预算</label>
-                            <input id="budget" name="budget" type="text" placeholder="1000元" />
+                            <input id="budget" name="budget" type="text" placeholder="示例：1000元（default: 尽可能少）" />
                         </div>
 
                         <div class="field">
                             <label for="people">人数</label>
-                            <input id="people" name="people" type="number" min="1" max="12" placeholder="1" />
+                            <input id="people" name="people" type="number" min="1" max="12" placeholder="default: 1" />
                         </div>
 
                         <div class="field">
@@ -125,13 +125,21 @@
     </div>
 
 
+    <!-- Loader Modal -->
+    <div id="loader-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="loader"></div>
+            <p>正在识别您的语音，请稍候...</p>
+        </div>
+    </div>
+
     <!-- Speech Input Modal -->
     <div id="speech-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <span id="speech-close-btn" class="close-btn">&times;</span>
             <h2>请说出您的旅行计划</h2>
             <div id="speech-feedback" class="speech-feedback-container" style="display: block;">
-                <p id="speech-text" class="speech-text">正在等待语音...</p>
+                <p id="speech-text" class="speech-text">按住按钮开始说话...</p>
             </div>
             <button id="hold-to-talk-btn" class="btn">按住说话</button>
             <div id="speech-confirmation-buttons" style="display: none;">

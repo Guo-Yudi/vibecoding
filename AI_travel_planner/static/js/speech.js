@@ -39,6 +39,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     confirmSpeechBtn.addEventListener('click', () => {
+        speechModal.style.display = 'none'; // Close speech modal immediately
+
         if (finalRecognizedText) {
             document.getElementById('loader-modal').style.display = 'flex';
             fetch('/process-speech-text', {
@@ -61,10 +63,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .finally(() => {
                 document.getElementById('loader-modal').style.display = 'none';
-                speechModal.style.display = 'none';
             });
-        } else {
-            speechModal.style.display = 'none';
         }
     });
 
@@ -98,32 +97,67 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function startRecording() {
         if (isRecording) return;
-        isRecording = true;
-        finalRecognizedText = "";
-        speechText.textContent = '正在聆听...';
-        holdToTalkBtn.classList.add('recording'); // For visual feedback
+        
+        // Immediately update UI to show connection is in progress
+        speechText.textContent = '正在连接，请稍候...';
+        holdToTalkBtn.classList.add('recording'); // Use recording style for visual feedback
 
         try {
             // 1. Initialize WebSocket
             const wsUrl = `ws://${window.location.host}/ws/audio`;
             socket = new WebSocket(wsUrl);
 
-            socket.onopen = () => console.log("WebSocket connection established.");
+            socket.onopen = async () => {
+                console.log("WebSocket connection established.");
+                // Now that connection is open, ask for mic and start listening
+                speechText.textContent = '正在聆听...';
+                isRecording = true;
+                finalRecognizedText = "";
+
+                try {
+                    // 2. Initialize AudioContext and AudioWorklet
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        sampleRate: 16000
+                    });
+
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000 } });
+                    microphone = audioContext.createMediaStreamSource(stream);
+
+                    await audioContext.audioWorklet.addModule('/static/js/pcm-processor.js');
+                    pcmProcessorNode = new AudioWorkletNode(audioContext, 'pcm-processor');
+
+                    // 3. Set up the processor to send data over WebSocket
+                    pcmProcessorNode.port.onmessage = (event) => {
+                        if (socket && socket.readyState === WebSocket.OPEN) {
+                            socket.send(event.data);
+                        }
+                    };
+
+                    // 4. Connect the audio graph
+                    microphone.connect(pcmProcessorNode);
+
+                } catch (err) {
+                    console.error("Error during audio setup:", err);
+                    alert("无法启动录音功能，请检查麦克风权限。\n" + err.message);
+                    stopRecording(); // Clean up on error
+                }
+            };
+
             socket.onerror = error => {
                 console.error("WebSocket Error:", error);
-                speechText.textContent = 'WebSocket 连接错误。';
+                speechText.textContent = '连接失败，请刷新重试。';
+                holdToTalkBtn.classList.remove('recording');
             };
+
             socket.onclose = (event) => {
                 console.log("WebSocket connection closed.", event.reason);
                 if (isRecording) {
-                    // This indicates an unexpected closure.
                     isRecording = false;
                     holdToTalkBtn.classList.remove('recording');
-                    speechText.textContent = '连接意外关闭。';
                 }
-                // Transition to confirmation state when socket closes
                 showConfirmationButtons();
             };
+
             socket.onmessage = event => {
                 const data = JSON.parse(event.data);
                 if (data.error) {
@@ -131,52 +165,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     speechText.textContent = `错误: ${data.error}`;
                 } else if (data.intermediate_result) {
                     speechText.textContent = data.intermediate_result;
-                    // Keep track of the latest text, even if it's intermediate
                     finalRecognizedText = data.intermediate_result;
                 } else if (data.final_text) {
                     speechText.textContent = data.final_text;
                     finalRecognizedText = data.final_text;
-                    // When the final text arrives, the server will close the connection.
-                    // The `onclose` handler will then trigger the modal close and text extraction.
                 }
             };
-
-            // Wait for WebSocket to be open before starting audio
-            await new Promise((resolve, reject) => {
-                if (socket.readyState === WebSocket.OPEN) {
-                    resolve();
-                } else {
-                    socket.onopen = resolve;
-                    socket.onerror = reject; // Reject if connection fails
-                }
-            });
-
-            // 2. Initialize AudioContext and AudioWorklet
-            audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                sampleRate: 16000
-            });
-
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000 } });
-            microphone = audioContext.createMediaStreamSource(stream);
-
-            await audioContext.audioWorklet.addModule('/static/js/pcm-processor.js');
-            pcmProcessorNode = new AudioWorkletNode(audioContext, 'pcm-processor');
-
-            // 3. Set up the processor to send data over WebSocket
-            pcmProcessorNode.port.onmessage = (event) => {
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    socket.send(event.data); // event.data is the Int16Array buffer (raw PCM)
-                }
-            };
-
-            // 4. Connect the audio graph
-            microphone.connect(pcmProcessorNode);
 
         } catch (err) {
-            console.error("Error during recording setup:", err);
-            alert("无法启动录音功能，请检查麦克风权限和浏览器支持。\n" + err.message);
-            isRecording = false; // Reset state
-            speechText.textContent = '启动失败，请重试。';
+            console.error("Error during WebSocket initialization:", err);
+            speechText.textContent = '无法建立连接。';
             holdToTalkBtn.classList.remove('recording');
         }
     }
