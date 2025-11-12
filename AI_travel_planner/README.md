@@ -20,8 +20,7 @@ Deepseek API 完成旅行规划
 
 # 五、运行方式
 1.  **拉取 Docker 镜像**:
-    docker pull crpi-arx8fmno0tqe2xbe.cn-hangzhou.personal.cr.aliyuncs.com/guoyudi/vibecoding:latest
-    ```
+    `docker pull crpi-arx8fmno0tqe2xbe.cn-hangzhou.personal.cr.aliyuncs.com/guoyudi/vibecoding:latest`
 
 2.  **运行 Docker 容器**:
     运行以下命令来启动容器。请务必将 -e 后的参数替换为实际密钥（具体命令在Pdf文件）。
