@@ -18,7 +18,7 @@ AI Travel Planner
 3. Supabase 提供数据库和认证服务
 4. Deepseek API 完成旅行规划
 
-# 五、运行方式
+# 四、运行方式
 1.  **拉取 Docker 镜像**:
     `docker pull crpi-arx8fmno0tqe2xbe.cn-hangzhou.personal.cr.aliyuncs.com/guoyudi/vibecoding:latest`
 
