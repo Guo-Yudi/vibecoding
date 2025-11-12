@@ -23,6 +23,11 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 XF_APPID = (os.getenv("XF_APPID") or "").strip()
 XF_API_KEY = (os.getenv("XF_API_KEY") or "").strip()
 XF_API_SECRET = (os.getenv("XF_API_SECRET") or "").strip()
+# 百度地图 API 密钥
+BAIDU_MAP_KEY = (os.getenv("BAIDU_MAP_KEY") or "").strip()
+# Supabase 配置
+SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").strip()
+SUPABASE_ANON_KEY = (os.getenv("SUPABASE_ANON_KEY") or "").strip()
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 sock = Sock(app)
@@ -217,7 +222,14 @@ def call_deepseek_api(prompt: str, model: Optional[str] = None) -> str:
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html")
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
+    return render_template(
+        "index.html",
+        baidu_map_key=BAIDU_MAP_KEY,
+        supabase_url=SUPABASE_URL,
+        supabase_anon_key=SUPABASE_ANON_KEY,
+    )
 
 
 @app.route("/generate", methods=["POST"])

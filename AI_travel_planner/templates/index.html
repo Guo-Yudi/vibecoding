@@ -7,11 +7,16 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main-style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/form-styles.css') }}">
     <script type="text/javascript"
-        src="https://api.map.baidu.com/api?v=1.0&type=webgl&ak=l8IZzVxMX1Pc882f2NEcZI6AsnlYysZl"></script>
+        src="https://api.map.baidu.com/api?v=1.0&type=webgl&ak={{ baidu_map_key }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/map_init.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/aiwindow-style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+    <script>
+        // Pass backend variables to frontend JavaScript
+        window.SUPABASE_URL = "{{ supabase_url }}";
+        window.SUPABASE_ANON_KEY = "{{ supabase_anon_key }}";
+    </script>
 </head>
 
 <body>

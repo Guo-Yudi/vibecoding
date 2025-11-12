@@ -1,11 +1,17 @@
 
-const SUPABASE_URL = 'https://bhebundadxyovxfnsykk.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoZWJ1bmRhZHh5b3Z4Zm5zeWtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI4Nzc5ODcsImV4cCI6MjA3ODQ1Mzk4N30.hFQE931u5cxg33ZTc2vXR6uged7lcw9fNZBvxwgsQ9U';
+// Supabase credentials are now passed from the backend via index.html
+const SUPABASE_URL = window.SUPABASE_URL;
+const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY;
 
 const { createClient } = supabase;
 const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-console.log('Supabase client initialized.');
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error("Supabase URL or Anon Key is missing. Make sure they are passed correctly from the backend.");
+    alert("Supabase configuration is missing. App functionality will be limited.");
+} else {
+    console.log('Supabase client initialized.');
+}
 
 // --- Authentication Functions ---
 
